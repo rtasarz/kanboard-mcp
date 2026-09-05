@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 26 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 27 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,13 +18,14 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (26 Tools)
+## Complete Tool Suite (27 Tools)
 
-### Project & Task Management (8 Tools)
+### Project & Task Management (9 Tools)
 | Tool | Description | Example Usage |
 |------|-------------|---------------|
 | `get_projects` | List all projects | *"Show me all projects"* |
 | `create_project` | Create new projects | *"Create a new project called Mobile App"* |
+| `duplicate_project` | Duplicate a project with selected optional parts | *"Duplicate the Template project as Mobile App with categories and actions"* |
 | `get_tasks` | Get project tasks | *"List all tasks in the Marketing project"* |
 | `create_task` | Create new tasks | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks | *"Update the login task description"* |
