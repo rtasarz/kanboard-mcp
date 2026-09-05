@@ -271,11 +271,12 @@ class McpServer extends Base
             ],
             [
                 'name' => 'get_task_details',
-                'description' => 'Get detailed information about a specific task',
+                'description' => 'Get detailed information about a specific task (verbose: true adds project, column, swimlane, and category names)',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'task_id' => ['type' => 'integer', 'description' => 'Task ID']
+                        'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
+                        'verbose' => ['type' => 'boolean', 'description' => 'Include project, column, swimlane, and category names (default: false)']
                     ],
                     'required' => ['task_id']
                 ]
@@ -662,7 +663,11 @@ class McpServer extends Base
                         return $this->createToolExecutionErrorResponse('Invalid arguments: task_id must be a positive integer', $id);
                     }
 
-                    $task = $this->container['taskFinderModel']->getById($arguments['task_id']);
+                    if (!empty($arguments['verbose'])) {
+                        $task = $this->container['taskFinderModel']->getDetails($arguments['task_id']);
+                    } else {
+                        $task = $this->container['taskFinderModel']->getById($arguments['task_id']);
+                    }
                     $result = $task;
                     break;
 

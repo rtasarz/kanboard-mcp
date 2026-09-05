@@ -30,7 +30,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `create_task` | Create new tasks (optional `column_id`, `swimlane_id`) | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
-| `get_task_details` | Get detailed task info | *"Show me full details for task #123"* |
+| `get_task_details` | Get detailed task info (`verbose: true` adds project/column/swimlane/category names) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes | *"Move the API task to Done column"* |
 
 ### Column Management (4 Tools)
