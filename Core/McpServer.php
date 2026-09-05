@@ -224,7 +224,8 @@ class McpServer extends Base
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
                         'title' => ['type' => 'string', 'description' => 'Task title'],
                         'description' => ['type' => 'string', 'description' => 'Task description'],
-                        'column_id' => ['type' => 'integer', 'description' => 'Column ID']
+                        'column_id' => ['type' => 'integer', 'description' => 'Column ID'],
+                        'swimlane_id' => ['type' => 'integer', 'description' => 'Swimlane ID (default swimlane if omitted)']
                     ],
                     'required' => ['project_id', 'title']
                 ]
@@ -256,13 +257,14 @@ class McpServer extends Base
             ],
             [
                 'name' => 'move_task',
-                'description' => 'Move a task to a different column',
+                'description' => 'Move a task to a different column or swimlane',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
                         'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
-                        'column_id' => ['type' => 'integer', 'description' => 'Target column ID']
+                        'column_id' => ['type' => 'integer', 'description' => 'Target column ID'],
+                        'swimlane_id' => ['type' => 'integer', 'description' => 'Target swimlane ID (keeps current if omitted)']
                     ],
                     'required' => ['project_id', 'task_id', 'column_id']
                 ]
@@ -601,6 +603,9 @@ class McpServer extends Base
                     if (isset($arguments['column_id'])) {
                         $taskData['column_id'] = (int) $arguments['column_id'];
                     }
+                    if (isset($arguments['swimlane_id']) && (int) $arguments['swimlane_id'] > 0) {
+                        $taskData['swimlane_id'] = (int) $arguments['swimlane_id'];
+                    }
                     $taskId = $this->container['taskCreationModel']->create($taskData);
                     $result = ['task_id' => $taskId];
                     break;
@@ -640,11 +645,14 @@ class McpServer extends Base
                         );
                     }
 
+                    $swimlaneId = isset($arguments['swimlane_id']) ? (int) $arguments['swimlane_id'] : 0;
+
                     $moveResult = $this->container['taskPositionModel']->movePosition(
                         $projectId,
                         $taskId,
                         $columnId,
-                        1
+                        1,
+                        $swimlaneId
                     );
                     $result = ['success' => $moveResult];
                     break;
