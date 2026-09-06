@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 27 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 32 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,7 +18,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (27 Tools)
+## Complete Tool Suite (32 Tools)
 
 ### Project & Task Management (9 Tools)
 | Tool | Description | Example Usage |
@@ -32,6 +32,15 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
 | `get_task_details` | Get detailed task info (`verbose: true` adds project/column/swimlane/category names) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes | *"Move the API task to Done column"* |
+
+### Automatic Actions (5 Tools)
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `get_project_actions` | List a project's automatic actions (`params_resolved` uses the same lookups as the UI) | *"List automatic actions on the template board"* |
+| `get_available_actions` | List available action classes (class name => description) | *"What automatic actions can I create?"* |
+| `get_compatible_action_events` | List events compatible with an action | *"Which events work with TaskMoveColumnNotMovedPeriod?"* |
+| `create_action` | Create an automatic action (`params` keys are per action class in `app/Action/*.php`) | *"Move tasks from Acceptance to Done after 7 days"* |
+| `remove_action` | Remove an automatic action by id | *"Delete the dangling action after I removed that column"* |
 
 ### Column Management (4 Tools)
 | Tool | Description | Example Usage |

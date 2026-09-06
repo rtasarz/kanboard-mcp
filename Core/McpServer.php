@@ -498,6 +498,62 @@ class McpServer extends Base
                     ],
                     'required' => ['project_id']
                 ]
+            ],
+            // Automatic Actions
+            [
+                'name' => 'get_project_actions',
+                'description' => 'List automatic actions for a project. params_resolved uses the same id lookups as the Automatic actions page (dangling ids show as "?")',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID']
+                    ],
+                    'required' => ['project_id']
+                ]
+            ],
+            [
+                'name' => 'get_available_actions',
+                'description' => 'List available automatic actions (class name => description)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'additionalProperties' => false,
+                ]
+            ],
+            [
+                'name' => 'get_compatible_action_events',
+                'description' => 'List events compatible with an automatic action (event name => description)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'action_name' => ['type' => 'string', 'description' => 'Automatic action class name (from get_available_actions)']
+                    ],
+                    'required' => ['action_name']
+                ]
+            ],
+            [
+                'name' => 'create_action',
+                'description' => 'Create an automatic action. params keys are defined per action class (Kanboard app/Action/*.php); values are strings, e.g. {"duration":"7","src_column_id":"141","dest_column_id":"133"}',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
+                        'event_name' => ['type' => 'string', 'description' => 'Event name (from get_compatible_action_events)'],
+                        'action_name' => ['type' => 'string', 'description' => 'Action class name from get_available_actions (includes leading backslash)'],
+                        'params' => ['type' => 'object', 'description' => 'Action parameters as a key/value object']
+                    ],
+                    'required' => ['project_id', 'event_name', 'action_name', 'params']
+                ]
+            ],
+            [
+                'name' => 'remove_action',
+                'description' => 'Remove an automatic action by id (cleanup path for dangling actions after a column delete)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'action_id' => ['type' => 'integer', 'description' => 'Action ID']
+                    ],
+                    'required' => ['action_id']
+                ]
             ]
         ];
 
@@ -872,6 +928,42 @@ class McpServer extends Base
                     $result = array_values($swimlanes);
                     break;
 
+                case 'get_project_actions':
+                    if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: project_id must be a positive integer', $id);
+                    }
+
+                    $result = $this->getProjectActionsWithResolvedParams((int) $arguments['project_id']);
+                    break;
+
+                case 'get_available_actions':
+                    $result = $this->container['actionManager']->getAvailableActions();
+                    break;
+
+                case 'get_compatible_action_events':
+                    if (!isset($arguments['action_name']) || !is_string($arguments['action_name']) || trim($arguments['action_name']) === '') {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: action_name must be a non-empty string', $id);
+                    }
+
+                    try {
+                        $result = $this->container['actionManager']->getCompatibleEvents(trim($arguments['action_name']));
+                    } catch (\RuntimeException $exception) {
+                        return $this->createToolExecutionErrorResponse('Unknown action: ' . $arguments['action_name'], $id);
+                    }
+                    break;
+
+                case 'create_action':
+                    $result = ['action_id' => $this->createAutomaticAction($arguments)];
+                    break;
+
+                case 'remove_action':
+                    if (!isset($arguments['action_id']) || (int) $arguments['action_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: action_id must be a positive integer', $id);
+                    }
+
+                    $result = ['success' => (bool) $this->container['actionModel']->remove((int) $arguments['action_id'])];
+                    break;
+
                 default:
                     return $this->errorResponse(-32602, 'Unknown tool: ' . $toolName, $id);
             }
@@ -956,6 +1048,156 @@ class McpServer extends Base
             $private,
             $identifier
         );
+    }
+
+    /**
+     * List a project's automatic actions (get_project_actions).
+     * Mirrors ActionController::index: getList lookups and TextHelper::in
+     * (missing keys become "?"). Raw params are kept; descriptions come from
+     * actionManager / eventManager the same way the UI labels the rows.
+     */
+    private function getProjectActionsWithResolvedParams(int $projectId): array
+    {
+        $actions = $this->container['actionModel']->getAllByProject($projectId);
+
+        if (!is_array($actions) || $actions === []) {
+            return [];
+        }
+
+        $users = $this->container['projectUserRoleModel']->getAssignableUsersList($projectId);
+        $projects = $this->container['projectModel']->getList(false, false);
+        $lists = [
+            'column_id' => $this->container['columnModel']->getList($projectId),
+            'user_id' => $users,
+            'owner_id' => $users,
+            'project_id' => $projects,
+            'color_id' => $this->container['colorModel']->getList(),
+            'category_id' => $this->container['categoryModel']->getList($projectId),
+            'link_id' => $this->container['linkModel']->getList(0, false),
+            'swimlane_id' => $this->container['swimlaneModel']->getList($projectId),
+        ];
+        $availableActions = $this->container['actionManager']->getAvailableActions();
+        $availableEvents = $this->container['eventManager']->getAll();
+
+        foreach ($actions as &$action) {
+            $params = is_array($action['params'] ?? null) ? $action['params'] : [];
+            $action['params_resolved'] = $this->resolveActionParams($params, $lists);
+            $actionName = $action['action_name'] ?? '';
+            $eventName = $action['event_name'] ?? '';
+            $action['action_description'] = $availableActions[$actionName] ?? $actionName;
+            $action['event_description'] = $availableEvents[$eventName] ?? $eventName;
+        }
+        unset($action);
+
+        return array_values($actions);
+    }
+
+    /**
+     * Resolve action params the way action/index.php does: substring match on
+     * the id suffix, then dictionary lookup with "?" for dangling keys.
+     * Non-id params (duration, etc.) pass through as strings.
+     *
+     * @param array<string, mixed> $params
+     * @param array<string, array<int|string, string>> $lists
+     * @return array<string, string>
+     */
+    private function resolveActionParams(array $params, array $lists): array
+    {
+        $resolved = [];
+
+        foreach ($params as $name => $value) {
+            $name = (string) $name;
+            $matched = false;
+
+            foreach ($lists as $needle => $listing) {
+                if (!str_contains($name, $needle)) {
+                    continue;
+                }
+
+                $resolved[$name] = isset($listing[$value]) ? (string) $listing[$value] : '?';
+                $matched = true;
+                break;
+            }
+
+            if (!$matched) {
+                $resolved[$name] = (string) $value;
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * Create an automatic action, mirroring ActionProcedure::createAction
+     * (available-action / compatible-event / required-params checks, then
+     * ActionValidator, then ActionModel::create).
+     */
+    private function createAutomaticAction(array $arguments): int
+    {
+        if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: project_id must be a positive integer');
+        }
+
+        if (!isset($arguments['event_name']) || !is_string($arguments['event_name']) || trim($arguments['event_name']) === '') {
+            throw new InvalidArgumentException('Invalid arguments: event_name must be a non-empty string');
+        }
+
+        if (!isset($arguments['action_name']) || !is_string($arguments['action_name']) || trim($arguments['action_name']) === '') {
+            throw new InvalidArgumentException('Invalid arguments: action_name must be a non-empty string');
+        }
+
+        if (!isset($arguments['params']) || !is_array($arguments['params'])) {
+            throw new InvalidArgumentException('Invalid arguments: params must be an object');
+        }
+
+        $values = [
+            'project_id' => (int) $arguments['project_id'],
+            'event_name' => trim($arguments['event_name']),
+            'action_name' => trim($arguments['action_name']),
+            'params' => $arguments['params'],
+        ];
+
+        list($valid) = $this->container['actionValidator']->validateCreation($values);
+        if (!$valid) {
+            throw new InvalidArgumentException('Invalid arguments: action creation validation failed');
+        }
+
+        $available = $this->container['actionManager']->getAvailableActions();
+        if (!isset($available[$values['action_name']])) {
+            throw new InvalidArgumentException('Unknown action: ' . $values['action_name']);
+        }
+
+        $action = $this->container['actionManager']->getAction($values['action_name']);
+        if (!in_array($values['event_name'], $action->getEvents(), true)) {
+            throw new InvalidArgumentException('Incompatible event for action: ' . $values['event_name']);
+        }
+
+        $required = $action->getActionRequiredParameters();
+        foreach ($required as $param => $label) {
+            if (!array_key_exists($param, $values['params'])) {
+                throw new InvalidArgumentException('Missing action parameter: ' . $param);
+            }
+        }
+        foreach ($values['params'] as $param => $value) {
+            if (!array_key_exists($param, $required)) {
+                throw new InvalidArgumentException('Unknown action parameter: ' . $param);
+            }
+        }
+
+        $userId = isset($this->container['userSession'])
+            ? (int) $this->container['userSession']->getId()
+            : 0;
+
+        if (!$this->container['actionValidator']->validateParameters($values['project_id'], $userId, $values['params'])) {
+            throw new InvalidArgumentException('Action parameters not allowed for this project');
+        }
+
+        $actionId = $this->container['actionModel']->create($values);
+        if ($actionId === false || (int) $actionId <= 0) {
+            throw new InvalidArgumentException('Failed to create action');
+        }
+
+        return (int) $actionId;
     }
 
     /**
