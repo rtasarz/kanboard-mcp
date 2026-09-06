@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 34 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 38 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,7 +18,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (34 Tools)
+## Complete Tool Suite (38 Tools)
 
 ### Project & Task Management (9 Tools)
 | Tool | Description | Example Usage |
@@ -67,11 +67,15 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `update_swimlane` | Modify swimlanes | *"Rename Mobile Team to Cross-Platform Team"* |
 | `delete_swimlane` | Remove swimlanes | *"Delete the inactive team swimlane"* |
 
-### Tags & Colors (2 Tools)
+### Tags & Colors (6 Tools)
 | Tool | Description | Example Usage |
 |------|-------------|---------------|
 | `get_project_tags` | List a project's tags (`id`, `name`, `color_id`, `project_id`) | *"What tags exist on the clacks board?"* |
 | `get_colors` | List available colors (`color_id` => name) for tag/task/category `color_id` | *"Which color ids can I use on a tag?"* |
+| `create_tag` | Create a project tag (optional `color_id`) | *"Create a dev tag in blue"* |
+| `update_tag` | Rename a tag and/or set `color_id` | *"Color the new auth-oauth tag teal"* |
+| `remove_tag` | Remove a project tag | *"Delete the unused tag"* |
+| `set_task_tags` | Set task tags by name (`replace` default false; returns `new_tags`) | *"Add core and dev tags to this ticket"* |
 
 ### User & Assignment Management (6 Tools)
 | Tool | Description | Example Usage |

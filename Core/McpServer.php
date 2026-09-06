@@ -573,6 +573,60 @@ class McpServer extends Base
                     'type' => 'object',
                     'additionalProperties' => false,
                 ]
+            ],
+            [
+                'name' => 'create_tag',
+                'description' => 'Create a project tag. Optional color_id from get_colors.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
+                        'name' => ['type' => 'string', 'description' => 'Tag name'],
+                        'color_id' => ['type' => 'string', 'description' => 'Color id from get_colors (omit for no color)']
+                    ],
+                    'required' => ['project_id', 'name']
+                ]
+            ],
+            [
+                'name' => 'update_tag',
+                'description' => 'Rename a tag and/or set its color_id (omit a field to keep it)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'tag_id' => ['type' => 'integer', 'description' => 'Tag ID'],
+                        'name' => ['type' => 'string', 'description' => 'New tag name'],
+                        'color_id' => ['type' => 'string', 'description' => 'Color id from get_colors (empty string clears color)']
+                    ],
+                    'required' => ['tag_id']
+                ]
+            ],
+            [
+                'name' => 'remove_tag',
+                'description' => 'Remove a project tag',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'tag_id' => ['type' => 'integer', 'description' => 'Tag ID']
+                    ],
+                    'required' => ['tag_id']
+                ]
+            ],
+            [
+                'name' => 'set_task_tags',
+                'description' => 'Set tags on a task by name (creates missing tags). replace=false adds; replace=true replaces the set. Returns new_tags [{id, name}] created this call.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
+                        'tags' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'string'],
+                            'description' => 'Tag names'
+                        ],
+                        'replace' => ['type' => 'boolean', 'description' => 'Replace existing tags (default false = add)']
+                    ],
+                    'required' => ['task_id', 'tags']
+                ]
             ]
         ];
 
@@ -995,6 +1049,26 @@ class McpServer extends Base
                     $result = $this->container['colorModel']->getList();
                     break;
 
+                case 'create_tag':
+                    $result = ['tag_id' => $this->createProjectTag($arguments)];
+                    break;
+
+                case 'update_tag':
+                    $result = ['success' => $this->updateProjectTag($arguments)];
+                    break;
+
+                case 'remove_tag':
+                    if (!isset($arguments['tag_id']) || (int) $arguments['tag_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: tag_id must be a positive integer', $id);
+                    }
+
+                    $result = ['success' => (bool) $this->container['tagModel']->remove((int) $arguments['tag_id'])];
+                    break;
+
+                case 'set_task_tags':
+                    $result = $this->setTaskTagsByName($arguments);
+                    break;
+
                 default:
                     return $this->errorResponse(-32602, 'Unknown tool: ' . $toolName, $id);
             }
@@ -1229,6 +1303,105 @@ class McpServer extends Base
         }
 
         return (int) $actionId;
+    }
+
+    private function createProjectTag(array $arguments): int
+    {
+        if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: project_id must be a positive integer');
+        }
+
+        if (!isset($arguments['name']) || !is_string($arguments['name']) || trim($arguments['name']) === '') {
+            throw new InvalidArgumentException('Invalid arguments: name must be a non-empty string');
+        }
+
+        $colorId = null;
+        if (isset($arguments['color_id']) && is_string($arguments['color_id']) && $arguments['color_id'] !== '') {
+            $colorId = $arguments['color_id'];
+        }
+
+        $tagId = $this->container['tagModel']->create((int) $arguments['project_id'], trim($arguments['name']), $colorId);
+        if ($tagId === false || (int) $tagId <= 0) {
+            throw new InvalidArgumentException('Failed to create tag');
+        }
+
+        return (int) $tagId;
+    }
+
+    private function updateProjectTag(array $arguments): bool
+    {
+        if (!isset($arguments['tag_id']) || (int) $arguments['tag_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: tag_id must be a positive integer');
+        }
+
+        $tag = $this->container['tagModel']->getById((int) $arguments['tag_id']);
+        if (!is_array($tag) || $tag === []) {
+            throw new InvalidArgumentException('Tag not found');
+        }
+
+        $name = $tag['name'];
+        if (isset($arguments['name'])) {
+            if (!is_string($arguments['name']) || trim($arguments['name']) === '') {
+                throw new InvalidArgumentException('Invalid arguments: name must be a non-empty string');
+            }
+            $name = trim($arguments['name']);
+        }
+
+        $colorId = $tag['color_id'] ?? null;
+        if (array_key_exists('color_id', $arguments)) {
+            $colorId = (is_string($arguments['color_id']) && $arguments['color_id'] !== '')
+                ? $arguments['color_id']
+                : null;
+        }
+
+        return (bool) $this->container['tagModel']->update((int) $arguments['tag_id'], $name, $colorId);
+    }
+
+    /**
+     * @return array{success: bool, new_tags: list<array{id: int, name: string}>}
+     */
+    private function setTaskTagsByName(array $arguments): array
+    {
+        if (!isset($arguments['task_id']) || (int) $arguments['task_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: task_id must be a positive integer');
+        }
+
+        if (!isset($arguments['tags']) || !is_array($arguments['tags'])) {
+            throw new InvalidArgumentException('Invalid arguments: tags must be an array of strings');
+        }
+
+        $names = [];
+        foreach ($arguments['tags'] as $index => $tag) {
+            if (!is_string($tag) || trim($tag) === '') {
+                throw new InvalidArgumentException(sprintf('Invalid arguments: tags[%d] must be a non-empty string', $index));
+            }
+            $names[] = trim($tag);
+        }
+
+        $taskId = (int) $arguments['task_id'];
+        $projectId = (int) $this->container['taskFinderModel']->getProjectId($taskId);
+        if ($projectId <= 0) {
+            throw new InvalidArgumentException('Task not found');
+        }
+
+        $newTags = [];
+        foreach ($names as $name) {
+            $existingId = (int) $this->container['tagModel']->getIdByName($projectId, $name);
+            if ($existingId > 0) {
+                continue;
+            }
+
+            $tagId = $this->container['tagModel']->create($projectId, $name);
+            if ($tagId === false || (int) $tagId <= 0) {
+                throw new InvalidArgumentException('Failed to create tag: ' . $name);
+            }
+            $newTags[] = ['id' => (int) $tagId, 'name' => $name];
+        }
+
+        $replace = !empty($arguments['replace']);
+        $saved = $this->container['taskTagModel']->save($projectId, $taskId, $names, $replace);
+
+        return ['success' => (bool) $saved, 'new_tags' => $newTags];
     }
 
     /**
