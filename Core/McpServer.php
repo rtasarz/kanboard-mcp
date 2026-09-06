@@ -554,6 +554,25 @@ class McpServer extends Base
                     ],
                     'required' => ['action_id']
                 ]
+            ],
+            [
+                'name' => 'get_project_tags',
+                'description' => 'List project tags (id, name, color_id, project_id)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID']
+                    ],
+                    'required' => ['project_id']
+                ]
+            ],
+            [
+                'name' => 'get_colors',
+                'description' => 'List available colors (color_id => name). Used for tag/task/category color_id.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'additionalProperties' => false,
+                ]
             ]
         ];
 
@@ -962,6 +981,18 @@ class McpServer extends Base
                     }
 
                     $result = ['success' => (bool) $this->container['actionModel']->remove((int) $arguments['action_id'])];
+                    break;
+
+                case 'get_project_tags':
+                    if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: project_id must be a positive integer', $id);
+                    }
+
+                    $result = array_values($this->container['tagModel']->getAllByProject((int) $arguments['project_id']));
+                    break;
+
+                case 'get_colors':
+                    $result = $this->container['colorModel']->getList();
                     break;
 
                 default:
