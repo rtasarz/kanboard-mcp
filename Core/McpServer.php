@@ -176,6 +176,17 @@ class McpServer extends Base
                 ]
             ],
             [
+                'name' => 'remove_project',
+                'description' => 'Remove a project (destructive). Call only on explicit user OK.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID']
+                    ],
+                    'required' => ['project_id']
+                ]
+            ],
+            [
                 'name' => 'duplicate_project',
                 'description' => 'Duplicate a project (columns and swimlanes are always copied; optional parts are selected via copy_* flags)',
                 'inputSchema' => [
@@ -695,6 +706,14 @@ class McpServer extends Base
                         'description' => $arguments['description'] ?? ''
                     ]);
                     $result = ['project_id' => $projectId];
+                    break;
+
+                case 'remove_project':
+                    if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: project_id must be a positive integer', $id);
+                    }
+
+                    $result = ['success' => (bool) $this->container['projectModel']->remove((int) $arguments['project_id'])];
                     break;
 
                 case 'duplicate_project':
