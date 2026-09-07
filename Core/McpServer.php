@@ -225,7 +225,17 @@ class McpServer extends Base
                         'title' => ['type' => 'string', 'description' => 'Task title'],
                         'description' => ['type' => 'string', 'description' => 'Task description'],
                         'column_id' => ['type' => 'integer', 'description' => 'Column ID'],
-                        'swimlane_id' => ['type' => 'integer', 'description' => 'Swimlane ID (default swimlane if omitted)']
+                        'swimlane_id' => ['type' => 'integer', 'description' => 'Swimlane ID (default swimlane if omitted)'],
+                        'category_id' => ['type' => 'integer', 'description' => 'Category ID'],
+                        'color_id' => ['type' => 'string', 'description' => 'Color id from get_colors'],
+                        'owner_id' => ['type' => 'integer', 'description' => 'Assignee user ID'],
+                        'date_due' => ['type' => 'string', 'description' => 'Due date (YYYY-MM-DD)'],
+                        'priority' => ['type' => 'integer', 'description' => 'Priority'],
+                        'tags' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'string'],
+                            'description' => 'Tag names (creates missing tags; response includes new_tags)'
+                        ]
                     ],
                     'required' => ['project_id', 'title']
                 ]
@@ -239,7 +249,18 @@ class McpServer extends Base
                         'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
                         'title' => ['type' => 'string', 'description' => 'Task title'],
                         'description' => ['type' => 'string', 'description' => 'Task description'],
-                        'column_id' => ['type' => 'integer', 'description' => 'Column ID']
+                        'column_id' => ['type' => 'integer', 'description' => 'Column ID'],
+                        'category_id' => ['type' => 'integer', 'description' => 'Category ID'],
+                        'color_id' => ['type' => 'string', 'description' => 'Color id from get_colors'],
+                        'owner_id' => ['type' => 'integer', 'description' => 'Assignee user ID'],
+                        'date_due' => ['type' => 'string', 'description' => 'Due date (YYYY-MM-DD)'],
+                        'priority' => ['type' => 'integer', 'description' => 'Priority'],
+                        'tags' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'string'],
+                            'description' => 'Tag names (creates missing tags; response includes new_tags)'
+                        ],
+                        'replace' => ['type' => 'boolean', 'description' => 'Replace existing tags (default false = add)']
                     ],
                     'required' => ['task_id']
                 ]
@@ -717,41 +738,11 @@ class McpServer extends Base
                     break;
 
                 case 'create_task':
-                    if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
-                        return $this->createToolExecutionErrorResponse('Invalid arguments: project_id must be a positive integer', $id);
-                    }
-
-                    if (!isset($arguments['title']) || !is_string($arguments['title']) || trim($arguments['title']) === '') {
-                        return $this->createToolExecutionErrorResponse('Invalid arguments: title must be a non-empty string', $id);
-                    }
-
-                    $taskData = [
-                        'project_id' => (int) $arguments['project_id'],
-                        'title' => trim($arguments['title']),
-                        'description' => $arguments['description'] ?? ''
-                    ];
-                    if (isset($arguments['column_id'])) {
-                        $taskData['column_id'] = (int) $arguments['column_id'];
-                    }
-                    if (isset($arguments['swimlane_id']) && (int) $arguments['swimlane_id'] > 0) {
-                        $taskData['swimlane_id'] = (int) $arguments['swimlane_id'];
-                    }
-                    $taskId = $this->container['taskCreationModel']->create($taskData);
-                    $result = ['task_id' => $taskId];
+                    $result = $this->createTaskFromArguments($arguments);
                     break;
 
                 case 'update_task':
-                    if (!isset($arguments['task_id']) || (int) $arguments['task_id'] <= 0) {
-                        return $this->createToolExecutionErrorResponse('Invalid arguments: task_id must be a positive integer', $id);
-                    }
-
-                    $taskData = ['id' => $arguments['task_id']];
-                    if (isset($arguments['title'])) $taskData['title'] = $arguments['title'];
-                    if (isset($arguments['description'])) $taskData['description'] = $arguments['description'];
-                    if (isset($arguments['column_id'])) $taskData['column_id'] = $arguments['column_id'];
-
-                    $updateResult = $this->container['taskModificationModel']->update($taskData);
-                    $result = ['success' => $updateResult];
+                    $result = $this->updateTaskFromArguments($arguments);
                     break;
 
                 case 'get_columns':
@@ -1358,32 +1349,139 @@ class McpServer extends Base
     }
 
     /**
-     * @return array{success: bool, new_tags: list<array{id: int, name: string}>}
+     * @return array{task_id: int, new_tags?: list<array{id: int, name: string}>}
      */
-    private function setTaskTagsByName(array $arguments): array
+    private function createTaskFromArguments(array $arguments): array
+    {
+        if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: project_id must be a positive integer');
+        }
+
+        if (!isset($arguments['title']) || !is_string($arguments['title']) || trim($arguments['title']) === '') {
+            throw new InvalidArgumentException('Invalid arguments: title must be a non-empty string');
+        }
+
+        $taskData = [
+            'project_id' => (int) $arguments['project_id'],
+            'title' => trim($arguments['title']),
+            'description' => $arguments['description'] ?? '',
+        ];
+        if (isset($arguments['column_id'])) {
+            $taskData['column_id'] = (int) $arguments['column_id'];
+        }
+        if (isset($arguments['swimlane_id']) && (int) $arguments['swimlane_id'] > 0) {
+            $taskData['swimlane_id'] = (int) $arguments['swimlane_id'];
+        }
+        $this->applyOptionalTaskFields($arguments, $taskData);
+
+        $newTags = null;
+        if (array_key_exists('tags', $arguments)) {
+            $names = $this->parseTagNames($arguments['tags']);
+            $newTags = $this->createMissingTags((int) $arguments['project_id'], $names);
+            $taskData['tags'] = $names;
+        }
+
+        $taskId = $this->container['taskCreationModel']->create($taskData);
+        if ($taskId === false || (int) $taskId <= 0) {
+            throw new InvalidArgumentException('Failed to create task');
+        }
+
+        $result = ['task_id' => (int) $taskId];
+        if ($newTags !== null) {
+            $result['new_tags'] = $newTags;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array{success: bool, new_tags?: list<array{id: int, name: string}>}
+     */
+    private function updateTaskFromArguments(array $arguments): array
     {
         if (!isset($arguments['task_id']) || (int) $arguments['task_id'] <= 0) {
             throw new InvalidArgumentException('Invalid arguments: task_id must be a positive integer');
         }
 
-        if (!isset($arguments['tags']) || !is_array($arguments['tags'])) {
+        $taskData = ['id' => (int) $arguments['task_id']];
+        if (isset($arguments['title'])) {
+            $taskData['title'] = $arguments['title'];
+        }
+        if (isset($arguments['description'])) {
+            $taskData['description'] = $arguments['description'];
+        }
+        if (isset($arguments['column_id'])) {
+            $taskData['column_id'] = $arguments['column_id'];
+        }
+        $this->applyOptionalTaskFields($arguments, $taskData);
+
+        $newTags = null;
+        if (array_key_exists('tags', $arguments)) {
+            $projectId = (int) $this->container['taskFinderModel']->getProjectId((int) $arguments['task_id']);
+            if ($projectId <= 0) {
+                throw new InvalidArgumentException('Task not found');
+            }
+            $names = $this->parseTagNames($arguments['tags']);
+            $newTags = $this->createMissingTags($projectId, $names);
+            $taskData['tags'] = $names;
+            $taskData['tags_only_add_new'] = empty($arguments['replace']) ? 1 : 0;
+        }
+
+        $result = ['success' => (bool) $this->container['taskModificationModel']->update($taskData)];
+        if ($newTags !== null) {
+            $result['new_tags'] = $newTags;
+        }
+
+        return $result;
+    }
+
+    private function applyOptionalTaskFields(array $arguments, array &$taskData): void
+    {
+        foreach (['category_id', 'owner_id', 'priority'] as $field) {
+            if (isset($arguments[$field])) {
+                $taskData[$field] = (int) $arguments[$field];
+            }
+        }
+        if (isset($arguments['color_id'])) {
+            if (!is_string($arguments['color_id'])) {
+                throw new InvalidArgumentException('Invalid arguments: color_id must be a string');
+            }
+            $taskData['color_id'] = $arguments['color_id'];
+        }
+        if (isset($arguments['date_due'])) {
+            if (!is_string($arguments['date_due']) || trim($arguments['date_due']) === '') {
+                throw new InvalidArgumentException('Invalid arguments: date_due must be a non-empty string');
+            }
+            $taskData['date_due'] = trim($arguments['date_due']);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseTagNames(mixed $tags): array
+    {
+        if (!is_array($tags)) {
             throw new InvalidArgumentException('Invalid arguments: tags must be an array of strings');
         }
 
         $names = [];
-        foreach ($arguments['tags'] as $index => $tag) {
+        foreach ($tags as $index => $tag) {
             if (!is_string($tag) || trim($tag) === '') {
                 throw new InvalidArgumentException(sprintf('Invalid arguments: tags[%d] must be a non-empty string', $index));
             }
             $names[] = trim($tag);
         }
 
-        $taskId = (int) $arguments['task_id'];
-        $projectId = (int) $this->container['taskFinderModel']->getProjectId($taskId);
-        if ($projectId <= 0) {
-            throw new InvalidArgumentException('Task not found');
-        }
+        return $names;
+    }
 
+    /**
+     * @param list<string> $names
+     * @return list<array{id: int, name: string}>
+     */
+    private function createMissingTags(int $projectId, array $names): array
+    {
         $newTags = [];
         foreach ($names as $name) {
             $existingId = (int) $this->container['tagModel']->getIdByName($projectId, $name);
@@ -1398,8 +1496,27 @@ class McpServer extends Base
             $newTags[] = ['id' => (int) $tagId, 'name' => $name];
         }
 
-        $replace = !empty($arguments['replace']);
-        $saved = $this->container['taskTagModel']->save($projectId, $taskId, $names, $replace);
+        return $newTags;
+    }
+
+    /**
+     * @return array{success: bool, new_tags: list<array{id: int, name: string}>}
+     */
+    private function setTaskTagsByName(array $arguments): array
+    {
+        if (!isset($arguments['task_id']) || (int) $arguments['task_id'] <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: task_id must be a positive integer');
+        }
+
+        $taskId = (int) $arguments['task_id'];
+        $projectId = (int) $this->container['taskFinderModel']->getProjectId($taskId);
+        if ($projectId <= 0) {
+            throw new InvalidArgumentException('Task not found');
+        }
+
+        $names = $this->parseTagNames($arguments['tags'] ?? null);
+        $newTags = $this->createMissingTags($projectId, $names);
+        $saved = $this->container['taskTagModel']->save($projectId, $taskId, $names, !empty($arguments['replace']));
 
         return ['success' => (bool) $saved, 'new_tags' => $newTags];
     }

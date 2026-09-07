@@ -27,8 +27,8 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `create_project` | Create new projects | *"Create a new project called Mobile App"* |
 | `duplicate_project` | Duplicate a project with selected optional parts | *"Duplicate the Template project as Mobile App with categories and actions"* |
 | `get_tasks` | Get project tasks | *"List all tasks in the Marketing project"* |
-| `create_task` | Create new tasks (optional `column_id`, `swimlane_id`) | *"Add a task to implement user authentication"* |
-| `update_task` | Modify existing tasks | *"Update the login task description"* |
+| `create_task` | Create new tasks (optional column, swimlane, category, color, owner, due, priority, tags) | *"Add a task to implement user authentication"* |
+| `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
 | `get_task_details` | Get detailed task info (`verbose: true` adds project/column/swimlane/category names) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes | *"Move the API task to Done column"* |

@@ -148,6 +148,31 @@ final class FakeTaskTagModel
     }
 }
 
+final class FakeTaskCreationModel
+{
+    public array $created = [];
+    public int $nextId = 200;
+
+    public function create(array $values): int
+    {
+        $this->created[] = $values;
+
+        return $this->nextId++;
+    }
+}
+
+final class FakeTaskModificationModel
+{
+    public array $updated = [];
+
+    public function update(array $values, $fireEvents = true): bool
+    {
+        $this->updated[] = $values;
+
+        return true;
+    }
+}
+
 final class FakeColorModel
 {
     public array $list = [];
@@ -177,14 +202,15 @@ function buildTagServer(
     FakeTagModel $tagModel,
     FakeColorModel $colorModel,
     ?FakeTaskFinderModel $taskFinder = null,
-    ?FakeTaskTagModel $taskTag = null
+    ?FakeTaskTagModel $taskTag = null,
+    array $extra = []
 ): McpServer {
     return new McpServer(new ArrayObject([
         'tagModel' => $tagModel,
         'colorModel' => $colorModel,
         'taskFinderModel' => $taskFinder ?? new FakeTaskFinderModel(),
         'taskTagModel' => $taskTag ?? new FakeTaskTagModel(),
-    ]));
+    ] + $extra));
 }
 
 function callTool(McpServer $server, string $name, array $arguments = []): array
@@ -327,6 +353,46 @@ check($res['isError'] === false && count($res['data'] ?? []) === 2, 'get_tasks r
 check(($res['data'][0]['tags'] ?? null) === $taskTag->byTask[50], 'get_tasks attaches tags to tagged task');
 check(($res['data'][1]['tags'] ?? null) === [], 'get_tasks attaches tags: [] to untagged task');
 check(!isset($res['data'][0]['tags'][0]['task_id']), 'get_tasks tag rows omit task_id');
+
+$creation = new FakeTaskCreationModel();
+$modification = new FakeTaskModificationModel();
+$server = buildTagServer($tagModel, $colorModel, $taskFinder, $taskTag, [
+    'taskCreationModel' => $creation,
+    'taskModificationModel' => $modification,
+]);
+
+$res = callTool($server, 'create_task', [
+    'project_id' => 2,
+    'title' => 'Extras',
+    'category_id' => 4,
+    'color_id' => 'green',
+    'owner_id' => 1,
+    'date_due' => '2026-09-10',
+    'priority' => 2,
+    'tags' => ['core', 'brand-new'],
+]);
+check($res['isError'] === false && ($res['data']['task_id'] ?? null) === 200, 'create_task with extras succeeds');
+check(($res['data']['new_tags'] ?? null) === [['id' => 102, 'name' => 'brand-new']], 'create_task new_tags is only newly created names');
+check(($creation->created[0]['category_id'] ?? null) === 4, 'create_task forwards category_id');
+check(($creation->created[0]['color_id'] ?? null) === 'green', 'create_task forwards color_id');
+check(($creation->created[0]['tags'] ?? null) === ['core', 'brand-new'], 'create_task forwards tag names');
+
+$res = callTool($server, 'create_task', ['project_id' => 2, 'title' => 'No tags']);
+check($res['isError'] === false && !array_key_exists('new_tags', $res['data'] ?? []), 'create_task omits new_tags when tags not passed');
+
+$res = callTool($server, 'update_task', [
+    'task_id' => 50,
+    'category_id' => 7,
+    'date_due' => '2026-09-11',
+    'tags' => ['core', 'later'],
+]);
+check($res['isError'] === false && ($res['data']['success'] ?? null) === true, 'update_task with extras succeeds');
+check(($res['data']['new_tags'] ?? null) === [['id' => 103, 'name' => 'later']], 'update_task new_tags is only newly created names');
+check(($modification->updated[0]['category_id'] ?? null) === 7, 'update_task forwards category_id');
+check(($modification->updated[0]['tags_only_add_new'] ?? null) === 1, 'update_task replace defaults to false (tags_only_add_new=1)');
+
+$res = callTool($server, 'update_task', ['task_id' => 50, 'tags' => ['core'], 'replace' => true]);
+check(($modification->updated[1]['tags_only_add_new'] ?? 1) === 0, 'update_task replace=true clears tags_only_add_new');
 
 echo "\n$checks checks, $failures failures\n";
 exit($failures === 0 ? 0 : 1);
