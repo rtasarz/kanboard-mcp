@@ -709,7 +709,7 @@ class McpServer extends Base
 
                     try {
                         $tasks = $this->container['taskFinderModel']->getAll($projectId, $statusId);
-                        $result = array_values($tasks);
+                        $result = $this->attachTagsToTasks(array_values($tasks));
                     } catch (Throwable $exception) {
                         $this->logThrowable('Failed to get tasks', $exception);
                         return $this->createToolExecutionErrorResponse('Failed to get tasks', $id);
@@ -797,7 +797,7 @@ class McpServer extends Base
                     } else {
                         $task = $this->container['taskFinderModel']->getById($arguments['task_id']);
                     }
-                    $result = $task;
+                    $result = is_array($task) ? $this->attachTagsToTask($task) : $task;
                     break;
 
                 case 'delete_task':
@@ -1402,6 +1402,60 @@ class McpServer extends Base
         $saved = $this->container['taskTagModel']->save($projectId, $taskId, $names, $replace);
 
         return ['success' => (bool) $saved, 'new_tags' => $newTags];
+    }
+
+    /**
+     * @param array<string, mixed> $task
+     * @return array<string, mixed>
+     */
+    private function attachTagsToTask(array $task): array
+    {
+        $task['tags'] = $this->normalizeTagRows(
+            $this->container['taskTagModel']->getTagsByTask((int) ($task['id'] ?? 0))
+        );
+
+        return $task;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $tasks
+     * @return list<array<string, mixed>>
+     */
+    private function attachTagsToTasks(array $tasks): array
+    {
+        $ids = [];
+        foreach ($tasks as $task) {
+            $id = (int) ($task['id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        $grouped = $this->container['taskTagModel']->getTagsByTaskIds($ids);
+        foreach ($tasks as $index => $task) {
+            $tid = (int) ($task['id'] ?? 0);
+            $tasks[$index]['tags'] = $this->normalizeTagRows($grouped[$tid] ?? []);
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<array{id: int, name: string, color_id: mixed}>
+     */
+    private function normalizeTagRows(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'name' => (string) ($row['name'] ?? ''),
+                'color_id' => $row['color_id'] ?? null,
+            ];
+        }
+
+        return $out;
     }
 
     /**

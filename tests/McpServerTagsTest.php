@@ -79,16 +79,39 @@ final class FakeTagModel
 final class FakeTaskFinderModel
 {
     public array $projectByTask = [];
+    public array $byId = [];
+    public array $all = [];
 
     public function getProjectId($taskId): int
     {
         return $this->projectByTask[(int) $taskId] ?? 0;
+    }
+
+    public function getById($taskId)
+    {
+        return $this->byId[(int) $taskId] ?? null;
+    }
+
+    public function getDetails($taskId)
+    {
+        $task = $this->getById($taskId);
+        if (!is_array($task)) {
+            return $task;
+        }
+
+        return $task + ['project_name' => 'clacks'];
+    }
+
+    public function getAll($projectId, $statusId): array
+    {
+        return $this->all[(int) $projectId][(int) $statusId] ?? [];
     }
 }
 
 final class FakeTaskTagModel
 {
     public array $saved = [];
+    public array $byTask = [];
 
     public function save($projectId, $taskId, array $tags, $removeOtherTags = true): bool
     {
@@ -100,6 +123,28 @@ final class FakeTaskTagModel
         ];
 
         return true;
+    }
+
+    public function getTagsByTask($taskId): array
+    {
+        return $this->byTask[(int) $taskId] ?? [];
+    }
+
+    public function getTagsByTaskIds($taskIds): array
+    {
+        $out = [];
+        foreach ($taskIds as $id) {
+            $id = (int) $id;
+            if (!isset($this->byTask[$id])) {
+                continue;
+            }
+            $out[$id] = [];
+            foreach ($this->byTask[$id] as $row) {
+                $out[$id][] = $row + ['task_id' => $id];
+            }
+        }
+
+        return $out;
     }
 }
 
@@ -258,6 +303,30 @@ check($res['isError'] === true, 'set_task_tags rejects unknown task_id');
 
 $res = callTool($server, 'set_task_tags', ['task_id' => 50, 'tags' => 'core']);
 check($res['isError'] === true, 'set_task_tags rejects non-array tags');
+
+$taskFinder->byId[50] = ['id' => 50, 'title' => 'Tagged', 'project_id' => 2];
+$taskFinder->byId[51] = ['id' => 51, 'title' => 'Bare', 'project_id' => 2];
+$taskFinder->all[2][1] = [$taskFinder->byId[50], $taskFinder->byId[51]];
+$taskTag->byTask[50] = [
+    ['id' => 1, 'name' => 'core', 'color_id' => 'yellow'],
+    ['id' => 6, 'name' => 'dev', 'color_id' => null],
+];
+
+$res = callTool($server, 'get_task_details', ['task_id' => 50]);
+check($res['isError'] === false, 'get_task_details succeeds');
+check(($res['data']['tags'] ?? null) === $taskTag->byTask[50], 'get_task_details includes tags as {id, name, color_id}');
+
+$res = callTool($server, 'get_task_details', ['task_id' => 50, 'verbose' => true]);
+check(($res['data']['project_name'] ?? null) === 'clacks' && ($res['data']['tags'] ?? null) === $taskTag->byTask[50], 'get_task_details verbose still includes tags');
+
+$res = callTool($server, 'get_task_details', ['task_id' => 51]);
+check(($res['data']['tags'] ?? null) === [], 'get_task_details with no tags returns tags: []');
+
+$res = callTool($server, 'get_tasks', ['project_id' => 2]);
+check($res['isError'] === false && count($res['data'] ?? []) === 2, 'get_tasks returns both tasks');
+check(($res['data'][0]['tags'] ?? null) === $taskTag->byTask[50], 'get_tasks attaches tags to tagged task');
+check(($res['data'][1]['tags'] ?? null) === [], 'get_tasks attaches tags: [] to untagged task');
+check(!isset($res['data'][0]['tags'][0]['task_id']), 'get_tasks tag rows omit task_id');
 
 echo "\n$checks checks, $failures failures\n";
 exit($failures === 0 ? 0 : 1);
