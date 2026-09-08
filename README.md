@@ -32,7 +32,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
 | `get_task_details` | Get detailed task info (`verbose: true` adds project/column/swimlane/category names) | *"Show me full details for task #123"* |
-| `move_task` | Move tasks between columns or swimlanes | *"Move the API task to Done column"* |
+| `move_task` | Move tasks between columns or swimlanes (closed tasks need `only_open: false`) | *"Move the API task to Done column"* |
 
 ### Automatic Actions (5 Tools)
 | Tool | Description | Example Usage |

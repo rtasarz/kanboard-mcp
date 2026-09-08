@@ -296,7 +296,8 @@ class McpServer extends Base
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
                         'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
                         'column_id' => ['type' => 'integer', 'description' => 'Target column ID'],
-                        'swimlane_id' => ['type' => 'integer', 'description' => 'Target swimlane ID (keeps current if omitted)']
+                        'swimlane_id' => ['type' => 'integer', 'description' => 'Target swimlane ID (keeps current if omitted)'],
+                        'only_open' => ['type' => 'boolean', 'description' => 'Refuse moving closed tasks (default true); set false to move closed tasks too']
                     ],
                     'required' => ['project_id', 'task_id', 'column_id']
                 ]
@@ -786,13 +787,27 @@ class McpServer extends Base
                     }
 
                     $swimlaneId = isset($arguments['swimlane_id']) ? (int) $arguments['swimlane_id'] : 0;
+                    $onlyOpen = isset($arguments['only_open']) ? (bool) $arguments['only_open'] : true;
+
+                    if ($onlyOpen) {
+                        $task = $this->container['taskFinderModel']->getById($taskId);
+                        if (!empty($task) && (int) $task['is_active'] === TaskModel::STATUS_CLOSED) {
+                            $result = [
+                                'success' => false,
+                                'message' => 'Task is closed and only_open defaults to true; pass only_open=false to move it'
+                            ];
+                            break;
+                        }
+                    }
 
                     $moveResult = $this->container['taskPositionModel']->movePosition(
                         $projectId,
                         $taskId,
                         $columnId,
                         1,
-                        $swimlaneId
+                        $swimlaneId,
+                        true,
+                        $onlyOpen
                     );
                     $result = ['success' => $moveResult];
                     break;
