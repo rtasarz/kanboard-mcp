@@ -662,8 +662,16 @@ class McpServer extends Base
                 ]
             ],
             [
+                'name' => 'get_link_labels',
+                'description' => 'List internal link labels (id, label, opposite_label). Used for create_task_link.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'additionalProperties' => false,
+                ]
+            ],
+            [
                 'name' => 'create_task_link',
-                'description' => 'Create an internal link between two tasks (label resolved via linkModel)',
+                'description' => 'Create an internal link between two tasks (label from get_link_labels)',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -1116,6 +1124,10 @@ class McpServer extends Base
 
                 case 'set_task_tags':
                     $result = $this->setTaskTagsByName($arguments);
+                    break;
+
+                case 'get_link_labels':
+                    $result = $this->normalizeLinkLabelRows($this->container['linkModel']->getMergedList());
                     break;
 
                 case 'create_task_link':
@@ -1701,6 +1713,25 @@ class McpServer extends Base
                 'label' => (string) ($row['label'] ?? ''),
                 'title' => (string) ($row['title'] ?? ''),
                 'project_id' => (int) ($row['project_id'] ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<array{id: int, label: string, opposite_label: string|null}>
+     */
+    private function normalizeLinkLabelRows(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $opposite = $row['opposite_label'] ?? null;
+            $out[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'label' => (string) ($row['label'] ?? ''),
+                'opposite_label' => ($opposite !== null && $opposite !== '') ? (string) $opposite : null,
             ];
         }
 

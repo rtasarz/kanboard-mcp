@@ -104,10 +104,16 @@ final class FakeTaskLinkModel
 final class FakeLinkModel
 {
     public array $byLabel = [];
+    public array $merged = [];
 
     public function getByLabel($label)
     {
         return $this->byLabel[(string) $label] ?? null;
+    }
+
+    public function getMergedList(): array
+    {
+        return $this->merged;
     }
 }
 
@@ -162,6 +168,7 @@ $listResponse = $server->handleRequest([
 ]);
 $toolNames = array_column($listResponse['result']['tools'] ?? [], 'name');
 check(!in_array('get_task_links', $toolNames, true), 'tools/list does not expose get_task_links');
+check(in_array('get_link_labels', $toolNames, true), 'tools/list exposes get_link_labels');
 check(in_array('create_task_link', $toolNames, true), 'tools/list exposes create_task_link');
 check(in_array('remove_task_link', $toolNames, true), 'tools/list exposes remove_task_link');
 check(!in_array('update_task_link', $toolNames, true), 'tools/list does not expose update_task_link');
@@ -193,6 +200,11 @@ check(!array_key_exists('links', $res['data'][0] ?? []), 'get_tasks does not att
 
 $linkModel = new FakeLinkModel();
 $linkModel->byLabel['is a parent of'] = ['id' => 7, 'label' => 'is a parent of'];
+$linkModel->merged = [
+    ['id' => 1, 'label' => 'relates to', 'opposite_label' => ''],
+    ['id' => 2, 'label' => 'blocks', 'opposite_label' => 'is blocked by'],
+    ['id' => 3, 'label' => 'is blocked by', 'opposite_label' => 'blocks'],
+];
 $server = new McpServer(new ArrayObject([
     'taskFinderModel' => $finder,
     'taskTagModel' => new FakeTaskTagModel(),
@@ -212,6 +224,14 @@ check(($links->created[0] ?? null) === [
     'opposite_task_id' => 11,
     'link_id' => 7,
 ], 'create_task_link resolves label via linkModel');
+
+$res = callTool($server, 'get_link_labels');
+check($res['isError'] === false, 'get_link_labels succeeds');
+check(($res['data'] ?? null) === [
+    ['id' => 1, 'label' => 'relates to', 'opposite_label' => null],
+    ['id' => 2, 'label' => 'blocks', 'opposite_label' => 'is blocked by'],
+    ['id' => 3, 'label' => 'is blocked by', 'opposite_label' => 'blocks'],
+], 'get_link_labels returns id, label, opposite_label (null when none)');
 
 $res = callTool($server, 'create_task_link', [
     'task_id' => 10,

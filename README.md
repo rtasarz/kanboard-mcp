@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 41 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 42 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,7 +18,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (41 Tools)
+## Complete Tool Suite (42 Tools)
 
 ### Project & Task Management (10 Tools)
 | Tool | Description | Example Usage |
@@ -78,10 +78,11 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `remove_tag` | Remove a project tag | *"Delete the unused tag"* |
 | `set_task_tags` | Set task tags by name (`replace` default false; returns `new_tags`) | *"Add core and dev tags to this ticket"* |
 
-### Task Links (2 Tools)
+### Task Links (3 Tools)
 | Tool | Description | Example Usage |
 |------|-------------|---------------|
-| `create_task_link` | Create an internal link (`label` resolved via linkModel, e.g. relates to, blocks) | *"Link this task as blocking #456"* |
+| `get_link_labels` | List internal link labels (`id`, `label`, `opposite_label`) | *"What link labels can I use?"* |
+| `create_task_link` | Create an internal link (`label` from get_link_labels) | *"Link this task as blocking #456"* |
 | `remove_task_link` | Remove an internal task link by row id | *"Unlink those two tasks"* |
 
 ### User & Assignment Management (6 Tools)
