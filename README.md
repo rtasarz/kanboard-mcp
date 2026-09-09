@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 39 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 41 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,7 +18,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (39 Tools)
+## Complete Tool Suite (41 Tools)
 
 ### Project & Task Management (10 Tools)
 | Tool | Description | Example Usage |
@@ -31,7 +31,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `create_task` | Create new tasks (optional column, swimlane, category, color, owner, due, priority, tags) | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
-| `get_task_details` | Get detailed task info (`verbose: true` adds project/column/swimlane/category names) | *"Show me full details for task #123"* |
+| `get_task_details` | Get detailed task info (`verbose: true` adds names; includes `tags` and `links`) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes (closed tasks need `only_open: false`) | *"Move the API task to Done column"* |
 
 ### Automatic Actions (5 Tools)
@@ -77,6 +77,12 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `update_tag` | Rename a tag and/or set `color_id` | *"Color the new auth-oauth tag teal"* |
 | `remove_tag` | Remove a project tag | *"Delete the unused tag"* |
 | `set_task_tags` | Set task tags by name (`replace` default false; returns `new_tags`) | *"Add core and dev tags to this ticket"* |
+
+### Task Links (2 Tools)
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `create_task_link` | Create an internal link (`label` resolved via linkModel, e.g. relates to, blocks) | *"Link this task as blocking #456"* |
+| `remove_task_link` | Remove an internal task link by row id | *"Unlink those two tasks"* |
 
 ### User & Assignment Management (6 Tools)
 | Tool | Description | Example Usage |
