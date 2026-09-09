@@ -145,6 +145,9 @@ foreach ($listResponse['result']['tools'] as $tool) {
     if ($tool['name'] === 'search_tasks') {
         check(($tool['inputSchema']['required'] ?? []) === ['project_id', 'query'], 'search_tasks requires project_id and query');
         check(isset($tool['inputSchema']['properties']['include_links']), 'search_tasks declares include_links');
+        $qdesc = (string) ($tool['inputSchema']['properties']['query']['description'] ?? '');
+        check(str_contains($qdesc, 'status:open|closed'), 'search_tasks query description lists status filters');
+        check(!str_contains($qdesc, 'query language'), 'search_tasks query description is not vague');
     }
 }
 

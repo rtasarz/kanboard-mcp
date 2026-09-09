@@ -212,12 +212,15 @@ class McpServer extends Base
             ],
             [
                 'name' => 'search_tasks',
-                'description' => 'Search tasks in a project (Kanboard query language; tags always; optional include_links). Dump with query status:open',
+                'description' => 'Search tasks in a project. Tags always; optional include_links. Dump: query status:open',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
-                        'query' => ['type' => 'string', 'description' => 'Kanboard search query (e.g. status:open assignee:me tag:core)'],
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'Filters ANDed. Bare text matches title/description/comments. Keys: status:open|closed, assignee:me|nobody|anyone|<user>, tag:, column:, swimlane:, category:, color:, creator:, id:, ref:, link:, comment:, title:, description:, priority:>N, score:, due:/created:/updated:/moved:/completed:/start: (YYYY-MM-DD, today, tomorrow, week; due:<2026-10-01). Quote spaced values (column:"In progress"). Empty = all statuses.'
+                        ],
                         'include_links' => ['type' => 'boolean', 'description' => 'Attach internal links (default false)']
                     ],
                     'required' => ['project_id', 'query']
