@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// RPC wiring tests for internal task links on get_task_details (KB#536 iter 1).
+// RPC wiring tests for internal task links (KB#536).
 // Mocks the Kanboard container models and drives McpServer::handleRequest.
 // Run: php tests/McpServerTaskLinksTest.php
 
@@ -66,10 +66,48 @@ final class FakeTaskTagModel
 final class FakeTaskLinkModel
 {
     public array $byTask = [];
+    public array $created = [];
+    public array $removed = [];
+    public int $nextId = 20;
+    public bool $createFails = false;
 
     public function getAll($taskId): array
     {
         return $this->byTask[(int) $taskId] ?? [];
+    }
+
+    public function create($taskId, $oppositeTaskId, $linkId)
+    {
+        if ($this->createFails) {
+            return false;
+        }
+
+        $id = $this->nextId++;
+        $this->created[] = [
+            'id' => $id,
+            'task_id' => (int) $taskId,
+            'opposite_task_id' => (int) $oppositeTaskId,
+            'link_id' => (int) $linkId,
+        ];
+
+        return $id;
+    }
+
+    public function remove($taskLinkId): bool
+    {
+        $this->removed[] = (int) $taskLinkId;
+
+        return (int) $taskLinkId > 0;
+    }
+}
+
+final class FakeLinkModel
+{
+    public array $byLabel = [];
+
+    public function getByLabel($label)
+    {
+        return $this->byLabel[(string) $label] ?? null;
     }
 }
 
@@ -124,6 +162,9 @@ $listResponse = $server->handleRequest([
 ]);
 $toolNames = array_column($listResponse['result']['tools'] ?? [], 'name');
 check(!in_array('get_task_links', $toolNames, true), 'tools/list does not expose get_task_links');
+check(in_array('create_task_link', $toolNames, true), 'tools/list exposes create_task_link');
+check(in_array('remove_task_link', $toolNames, true), 'tools/list exposes remove_task_link');
+check(!in_array('update_task_link', $toolNames, true), 'tools/list does not expose update_task_link');
 
 $res = callTool($server, 'get_task_details', ['task_id' => 10]);
 check($res['isError'] === false, 'get_task_details succeeds');
@@ -149,6 +190,56 @@ check(($res['data']['links'] ?? null) === [], 'get_task_details with no links re
 $res = callTool($server, 'get_tasks', ['project_id' => 2]);
 check($res['isError'] === false && count($res['data'] ?? []) === 2, 'get_tasks returns both tasks');
 check(!array_key_exists('links', $res['data'][0] ?? []), 'get_tasks does not attach links');
+
+$linkModel = new FakeLinkModel();
+$linkModel->byLabel['is a parent of'] = ['id' => 7, 'label' => 'is a parent of'];
+$server = new McpServer(new ArrayObject([
+    'taskFinderModel' => $finder,
+    'taskTagModel' => new FakeTaskTagModel(),
+    'taskLinkModel' => $links,
+    'linkModel' => $linkModel,
+]));
+
+$res = callTool($server, 'create_task_link', [
+    'task_id' => 10,
+    'opposite_task_id' => 11,
+    'label' => 'is a parent of',
+]);
+check($res['isError'] === false && ($res['data']['task_link_id'] ?? null) === 20, 'create_task_link returns task_link_id');
+check(($links->created[0] ?? null) === [
+    'id' => 20,
+    'task_id' => 10,
+    'opposite_task_id' => 11,
+    'link_id' => 7,
+], 'create_task_link resolves label via linkModel');
+
+$res = callTool($server, 'create_task_link', [
+    'task_id' => 10,
+    'opposite_task_id' => 11,
+    'label' => 'nope',
+]);
+check($res['isError'] === true, 'create_task_link rejects unknown label');
+
+$res = callTool($server, 'create_task_link', ['task_id' => 10, 'opposite_task_id' => 11, 'label' => '  ']);
+check($res['isError'] === true, 'create_task_link rejects blank label');
+
+$res = callTool($server, 'create_task_link', ['task_id' => 0, 'opposite_task_id' => 11, 'label' => 'is a parent of']);
+check($res['isError'] === true, 'create_task_link rejects non-positive task_id');
+
+$links->createFails = true;
+$res = callTool($server, 'create_task_link', [
+    'task_id' => 10,
+    'opposite_task_id' => 11,
+    'label' => 'is a parent of',
+]);
+check($res['isError'] === true, 'create_task_link surfaces model failure');
+
+$res = callTool($server, 'remove_task_link', ['task_link_id' => 7]);
+check($res['isError'] === false && ($res['data']['success'] ?? null) === true, 'remove_task_link succeeds');
+check($links->removed === [7], 'remove_task_link passes task_link_id');
+
+$res = callTool($server, 'remove_task_link', ['task_link_id' => 0]);
+check($res['isError'] === true, 'remove_task_link rejects non-positive task_link_id');
 
 echo "\n$checks checks, $failures failures\n";
 exit($failures === 0 ? 0 : 1);

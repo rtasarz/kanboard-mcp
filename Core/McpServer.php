@@ -660,6 +660,30 @@ class McpServer extends Base
                     ],
                     'required' => ['task_id', 'tags']
                 ]
+            ],
+            [
+                'name' => 'create_task_link',
+                'description' => 'Create an internal link between two tasks (label resolved via linkModel)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
+                        'opposite_task_id' => ['type' => 'integer', 'description' => 'Opposite task ID'],
+                        'label' => ['type' => 'string', 'description' => 'Link label (e.g. relates to, blocks)']
+                    ],
+                    'required' => ['task_id', 'opposite_task_id', 'label']
+                ]
+            ],
+            [
+                'name' => 'remove_task_link',
+                'description' => 'Remove an internal task link',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_link_id' => ['type' => 'integer', 'description' => 'Task link row ID']
+                    ],
+                    'required' => ['task_link_id']
+                ]
             ]
         ];
 
@@ -1092,6 +1116,18 @@ class McpServer extends Base
 
                 case 'set_task_tags':
                     $result = $this->setTaskTagsByName($arguments);
+                    break;
+
+                case 'create_task_link':
+                    $result = $this->createTaskLinkFromArguments($arguments);
+                    break;
+
+                case 'remove_task_link':
+                    if (!isset($arguments['task_link_id']) || (int) $arguments['task_link_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: task_link_id must be a positive integer', $id);
+                    }
+
+                    $result = ['success' => (bool) $this->container['taskLinkModel']->remove((int) $arguments['task_link_id'])];
                     break;
 
                 default:
@@ -1566,6 +1602,35 @@ class McpServer extends Base
         );
 
         return $task;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array{task_link_id: int}
+     */
+    private function createTaskLinkFromArguments(array $arguments): array
+    {
+        $taskId = isset($arguments['task_id']) ? (int) $arguments['task_id'] : 0;
+        $oppositeTaskId = isset($arguments['opposite_task_id']) ? (int) $arguments['opposite_task_id'] : 0;
+        if ($taskId <= 0 || $oppositeTaskId <= 0) {
+            throw new InvalidArgumentException('Invalid arguments: task_id and opposite_task_id must be positive integers');
+        }
+
+        if (!isset($arguments['label']) || !is_string($arguments['label']) || trim($arguments['label']) === '') {
+            throw new InvalidArgumentException('Invalid arguments: label must be a non-empty string');
+        }
+
+        $link = $this->container['linkModel']->getByLabel(trim($arguments['label']));
+        if (!is_array($link) || empty($link['id'])) {
+            throw new InvalidArgumentException('Unknown link label');
+        }
+
+        $taskLinkId = $this->container['taskLinkModel']->create($taskId, $oppositeTaskId, (int) $link['id']);
+        if ($taskLinkId === false || (int) $taskLinkId <= 0) {
+            throw new InvalidArgumentException('Failed to create task link');
+        }
+
+        return ['task_link_id' => (int) $taskLinkId];
     }
 
     /**
