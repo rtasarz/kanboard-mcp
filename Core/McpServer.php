@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kanboard\Plugin\ModelContextProtocol\Core;
 
 use Kanboard\Core\Base;
+use Kanboard\Filter\TaskProjectFilter;
 use Kanboard\Model\ColumnModel;
 use Kanboard\Model\TaskModel;
 use InvalidArgumentException;
@@ -210,20 +211,16 @@ class McpServer extends Base
                 ]
             ],
             [
-                'name' => 'get_tasks',
-                'description' => 'Get tasks from a project',
+                'name' => 'search_tasks',
+                'description' => 'Search tasks in a project (Kanboard query language; tags always; optional include_links). Dump with query status:open',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
-                        'status_id' => [
-                            'type' => 'integer',
-                            'description' => 'Status ID (1 for active, 0 for archived)',
-                            'enum' => [TaskModel::STATUS_CLOSED, TaskModel::STATUS_OPEN],
-                            'default' => TaskModel::STATUS_OPEN
-                        ]
+                        'query' => ['type' => 'string', 'description' => 'Kanboard search query (e.g. status:open assignee:me tag:core)'],
+                        'include_links' => ['type' => 'boolean', 'description' => 'Attach internal links (default false)']
                     ],
-                    'required' => ['project_id']
+                    'required' => ['project_id', 'query']
                 ]
             ],
             [
@@ -763,29 +760,28 @@ class McpServer extends Base
                     $result = ['project_id' => (int) $projectId];
                     break;
 
-                case 'get_tasks':
-                    $projectId = isset($arguments['project_id']) ? (int) $arguments['project_id'] : null;
-                    $statusId = array_key_exists('status_id', $arguments)
-                        ? (int) $arguments['status_id']
-                        : TaskModel::STATUS_OPEN;
-
-                    if ($projectId === null || $projectId <= 0 || !in_array(
-                        $statusId,
-                        [TaskModel::STATUS_OPEN, TaskModel::STATUS_CLOSED],
-                        true
-                    )) {
+                case 'search_tasks':
+                    $projectId = isset($arguments['project_id']) ? (int) $arguments['project_id'] : 0;
+                    $query = $arguments['query'] ?? null;
+                    if ($projectId <= 0 || !is_string($query)) {
                         return $this->createToolExecutionErrorResponse(
-                            'Invalid arguments: project_id and status_id must be integers (status_id in [0,1])',
+                            'Invalid arguments: project_id must be a positive integer and query must be a string',
                             $id
                         );
                     }
 
                     try {
-                        $tasks = $this->container['taskFinderModel']->getAll($projectId, $statusId);
+                        $tasks = $this->container['taskLexer']
+                            ->build($query)
+                            ->withFilter(new TaskProjectFilter($projectId))
+                            ->toArray();
                         $result = $this->attachTagsToTasks(array_values($tasks));
+                        if (!empty($arguments['include_links'])) {
+                            $result = $this->attachLinksToTasks($result);
+                        }
                     } catch (Throwable $exception) {
-                        $this->logThrowable('Failed to get tasks', $exception);
-                        return $this->createToolExecutionErrorResponse('Failed to get tasks', $id);
+                        $this->logThrowable('Failed to search tasks', $exception);
+                        return $this->createToolExecutionErrorResponse('Failed to search tasks', $id);
                     }
                     break;
 
@@ -1656,6 +1652,19 @@ class McpServer extends Base
         );
 
         return $task;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $tasks
+     * @return list<array<string, mixed>>
+     */
+    private function attachLinksToTasks(array $tasks): array
+    {
+        foreach ($tasks as $index => $task) {
+            $tasks[$index] = $this->attachLinksToTask($task);
+        }
+
+        return $tasks;
     }
 
     /**

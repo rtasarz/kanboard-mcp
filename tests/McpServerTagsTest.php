@@ -357,12 +357,6 @@ check(($res['data']['project_name'] ?? null) === 'clacks' && ($res['data']['tags
 $res = callTool($server, 'get_task_details', ['task_id' => 51]);
 check(($res['data']['tags'] ?? null) === [], 'get_task_details with no tags returns tags: []');
 
-$res = callTool($server, 'get_tasks', ['project_id' => 2]);
-check($res['isError'] === false && count($res['data'] ?? []) === 2, 'get_tasks returns both tasks');
-check(($res['data'][0]['tags'] ?? null) === $taskTag->byTask[50], 'get_tasks attaches tags to tagged task');
-check(($res['data'][1]['tags'] ?? null) === [], 'get_tasks attaches tags: [] to untagged task');
-check(!isset($res['data'][0]['tags'][0]['task_id']), 'get_tasks tag rows omit task_id');
-
 $creation = new FakeTaskCreationModel();
 $modification = new FakeTaskModificationModel();
 $server = buildTagServer($tagModel, $colorModel, $taskFinder, $taskTag, [

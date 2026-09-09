@@ -19,6 +19,18 @@ class TaskModel
     public const STATUS_CLOSED = 0;
 }
 
+namespace Kanboard\Filter;
+
+class TaskProjectFilter
+{
+    public $value;
+
+    public function __construct($value = null)
+    {
+        $this->value = $value;
+    }
+}
+
 namespace Kanboard\Plugin\ModelContextProtocol\Core;
 
 require __DIR__ . '/../Core/McpServer.php';

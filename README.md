@@ -27,7 +27,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `create_project` | Create new projects | *"Create a new project called Mobile App"* |
 | `remove_project` | Remove a project (destructive; explicit user OK) | *"Delete that scratch board"* |
 | `duplicate_project` | Duplicate a project with selected optional parts | *"Duplicate the Template project as Mobile App with categories and actions"* |
-| `get_tasks` | Get project tasks | *"List all tasks in the Marketing project"* |
+| `search_tasks` | Search project tasks (Kanboard query; tags always; `include_links` optional). Dump: `status:open` | *"Find open tasks assigned to me tagged core"* |
 | `create_task` | Create new tasks (optional column, swimlane, category, color, owner, due, priority, tags) | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |

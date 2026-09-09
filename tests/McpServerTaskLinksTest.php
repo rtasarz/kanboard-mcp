@@ -194,9 +194,7 @@ check(($res['data']['project_name'] ?? null) === 'clacks' && ($res['data']['link
 $res = callTool($server, 'get_task_details', ['task_id' => 11]);
 check(($res['data']['links'] ?? null) === [], 'get_task_details with no links returns links: []');
 
-$res = callTool($server, 'get_tasks', ['project_id' => 2]);
-check($res['isError'] === false && count($res['data'] ?? []) === 2, 'get_tasks returns both tasks');
-check(!array_key_exists('links', $res['data'][0] ?? []), 'get_tasks does not attach links');
+check(!in_array('get_tasks', $toolNames, true), 'tools/list does not expose get_tasks');
 
 $linkModel = new FakeLinkModel();
 $linkModel->byLabel['is a parent of'] = ['id' => 7, 'label' => 'is a parent of'];
