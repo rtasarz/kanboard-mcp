@@ -822,7 +822,7 @@ class McpServer extends Base
                     } else {
                         $task = $this->container['taskFinderModel']->getById($arguments['task_id']);
                     }
-                    $result = is_array($task) ? $this->attachTagsToTask($task) : $task;
+                    $result = is_array($task) ? $this->attachLinksToTask($this->attachTagsToTask($task)) : $task;
                     break;
 
                 case 'delete_task':
@@ -1569,6 +1569,19 @@ class McpServer extends Base
     }
 
     /**
+     * @param array<string, mixed> $task
+     * @return array<string, mixed>
+     */
+    private function attachLinksToTask(array $task): array
+    {
+        $task['links'] = $this->normalizeLinkRows(
+            $this->container['taskLinkModel']->getAll((int) ($task['id'] ?? 0))
+        );
+
+        return $task;
+    }
+
+    /**
      * @param list<array<string, mixed>> $tasks
      * @return list<array<string, mixed>>
      */
@@ -1603,6 +1616,26 @@ class McpServer extends Base
                 'id' => (int) ($row['id'] ?? 0),
                 'name' => (string) ($row['name'] ?? ''),
                 'color_id' => $row['color_id'] ?? null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<array{id: int, opposite_task_id: int, label: string, title: string, project_id: int}>
+     */
+    private function normalizeLinkRows(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'opposite_task_id' => (int) ($row['opposite_task_id'] ?? $row['task_id'] ?? 0),
+                'label' => (string) ($row['label'] ?? ''),
+                'title' => (string) ($row['title'] ?? ''),
+                'project_id' => (int) ($row['project_id'] ?? 0),
             ];
         }
 

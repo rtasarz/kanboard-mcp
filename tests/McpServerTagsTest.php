@@ -183,6 +183,14 @@ final class FakeColorModel
     }
 }
 
+final class FakeEmptyTaskLinkModel
+{
+    public function getAll($taskId): array
+    {
+        return [];
+    }
+}
+
 $checks = 0;
 $failures = 0;
 
@@ -210,6 +218,7 @@ function buildTagServer(
         'colorModel' => $colorModel,
         'taskFinderModel' => $taskFinder ?? new FakeTaskFinderModel(),
         'taskTagModel' => $taskTag ?? new FakeTaskTagModel(),
+        'taskLinkModel' => new FakeEmptyTaskLinkModel(),
     ] + $extra));
 }
 
