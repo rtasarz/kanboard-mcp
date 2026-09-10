@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kanboard\Plugin\ModelContextProtocol\Controller;
 
 use Kanboard\Core\Base;
+use Kanboard\Plugin\ModelContextProtocol\Core\McpAuth;
 use Kanboard\Plugin\ModelContextProtocol\Core\McpServer;
 use Throwable;
 
@@ -76,9 +77,9 @@ class ModelContextProtocolController extends Base
      */
     private function validateToken(): bool
     {
-        $token = $_GET['token'] ?? '';
-        
-        if (empty($token)) {
+        $token = McpAuth::tokenFromRequest($_SERVER, $_GET);
+
+        if ($token === '') {
             return false;
         }
         

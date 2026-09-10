@@ -33,4 +33,5 @@ return array(
     'Provides MCP server functionality for full Kanboard control via Model Context Protocol' => 'Provides MCP server functionality for full Kanboard control via Model Context Protocol',
     'Copy this URL to configure your MCP client. Token is included for authentication.' => 'Copy this URL to configure your MCP client. Token is included for authentication.',
     'This URL provides full access to your Kanboard instance. Keep it secure.' => 'This URL provides full access to your Kanboard instance. Keep it secure.',
+    'Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The token is sent as an Authorization header.' => 'Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The token is sent as an Authorization header.',
 ); 

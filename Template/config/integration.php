@@ -11,22 +11,25 @@
     
     // Get current token and build MCP URL
     $token = $this->task->mcpTokenModel->getCurrentToken();
-    $mcpUrl = $this->helper->url->base() . '?controller=ModelContextProtocolController&action=handle&plugin=ModelContextProtocol&token=' . $token;
+    $mcpUrl = $this->helper->url->base() . '?controller=ModelContextProtocolController&action=handle&plugin=ModelContextProtocol';
     ?>
     
     <div class="form-group">
         <label><strong><?= t('MCP Client Configuration') ?></strong></label>
         <textarea readonly 
                   class="form-control" 
-                  style="background-color: #f5f5f5; font-family: monospace; height: 120px; resize: vertical; width: 100%;"
+                  style="background-color: #f5f5f5; font-family: monospace; height: 180px; resize: vertical; width: 100%;"
                   onclick="this.select();">{
   "mcpServers": {
     "kanboard": {
-      "url": "<?= $this->text->e($mcpUrl) ?>"
+      "url": "<?= $this->text->e($mcpUrl) ?>",
+      "headers": {
+        "Authorization": "Bearer <?= $this->text->e($token) ?>"
+      }
     }
   }
 }</textarea>
-        <p class="form-help"><?= t('Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The server URL and authentication token are included.') ?></p>
+        <p class="form-help"><?= t('Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The token is sent as an Authorization header.') ?></p>
     </div>
     
     <div class="alert alert-info">
