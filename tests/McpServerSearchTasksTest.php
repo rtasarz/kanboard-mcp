@@ -83,6 +83,16 @@ final class FakeTaskLinkModel
     }
 }
 
+final class FakeTaskFileModel
+{
+    public array $byTask = [];
+
+    public function getAll($taskId): array
+    {
+        return $this->byTask[(int) $taskId] ?? [];
+    }
+}
+
 function callTool(McpServer $server, string $name, array $arguments = []): array
 {
     $response = $server->handleRequest([
@@ -113,6 +123,10 @@ $taskTag->byTask[50] = [
     ['id' => 1, 'name' => 'core', 'color_id' => 'yellow'],
     ['id' => 6, 'name' => 'dev', 'color_id' => null],
 ];
+$taskFile = new FakeTaskFileModel();
+$taskFile->byTask[50] = [
+    ['id' => 8, 'name' => 'shot.png', 'path' => 'tasks/8', 'is_image' => 1],
+];
 $taskLink = new FakeTaskLinkModel();
 $taskLink->byTask[50] = [
     [
@@ -129,6 +143,7 @@ $server = new McpServer(new ArrayObject([
     'taskLexer' => $lexer,
     'taskTagModel' => $taskTag,
     'taskLinkModel' => $taskLink,
+    'taskFileModel' => $taskFile,
 ]));
 
 $listResponse = $server->handleRequest([
@@ -161,6 +176,9 @@ check(
 check(($res['data'][0]['tags'] ?? null) === $taskTag->byTask[50], 'search_tasks attaches tags to tagged task');
 check(($res['data'][1]['tags'] ?? null) === [], 'search_tasks attaches tags: [] to untagged task');
 check(!isset($res['data'][0]['tags'][0]['task_id']), 'search_tasks tag rows omit task_id');
+check(($res['data'][0]['attachments'] ?? null) === [['id' => 8, 'name' => 'shot.png']], 'search_tasks attaches attachments {id, name}');
+check(($res['data'][1]['attachments'] ?? null) === [], 'search_tasks attaches attachments: [] when none');
+check(!isset($res['data'][0]['attachments'][0]['path']), 'search_tasks attachment rows omit path');
 check(!array_key_exists('links', $res['data'][0] ?? []), 'search_tasks omits links by default');
 
 $res = callTool($server, 'search_tasks', ['project_id' => 2, 'query' => 'status:open', 'include_links' => true]);

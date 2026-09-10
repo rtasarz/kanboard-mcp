@@ -226,7 +226,7 @@ class McpServer extends Base
             ],
             [
                 'name' => 'search_tasks',
-                'description' => 'Search tasks in a project. Tags always; optional include_links. Dump: query status:open',
+                'description' => 'Search tasks in a project. Tags and attachments always; optional include_links. Dump: query status:open',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -335,7 +335,7 @@ class McpServer extends Base
             ],
             [
                 'name' => 'get_task_details',
-                'description' => 'Get detailed information about a specific task (verbose: true adds project, column, swimlane, and category names)',
+                'description' => 'Get detailed information about a specific task (verbose: true adds names; includes tags, links, attachments {id, name})',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -832,7 +832,7 @@ class McpServer extends Base
                             ->build($query)
                             ->withFilter(new TaskProjectFilter($projectId))
                             ->toArray();
-                        $result = $this->attachTagsToTasks(array_values($tasks));
+                        $result = $this->attachFilesToTasks($this->attachTagsToTasks(array_values($tasks)));
                         if (!empty($arguments['include_links'])) {
                             $result = $this->attachLinksToTasks($result);
                         }
@@ -934,7 +934,7 @@ class McpServer extends Base
                     } else {
                         $task = $this->container['taskFinderModel']->getById($arguments['task_id']);
                     }
-                    $result = is_array($task) ? $this->attachLinksToTask($this->attachTagsToTask($task)) : $task;
+                    $result = is_array($task) ? $this->attachFilesToTask($this->attachLinksToTask($this->attachTagsToTask($task))) : $task;
                     break;
 
                 case 'delete_task':
@@ -1772,6 +1772,49 @@ class McpServer extends Base
         }
 
         return $tasks;
+    }
+
+    /**
+     * @param array<string, mixed> $task
+     * @return array<string, mixed>
+     */
+    private function attachFilesToTask(array $task): array
+    {
+        $task['attachments'] = $this->normalizeFileRows(
+            $this->container['taskFileModel']->getAll((int) ($task['id'] ?? 0))
+        );
+
+        return $task;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $tasks
+     * @return list<array<string, mixed>>
+     */
+    private function attachFilesToTasks(array $tasks): array
+    {
+        foreach ($tasks as $index => $task) {
+            $tasks[$index] = $this->attachFilesToTask($task);
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<array{id: int, name: string}>
+     */
+    private function normalizeFileRows(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'name' => (string) ($row['name'] ?? ''),
+            ];
+        }
+
+        return $out;
     }
 
     /**

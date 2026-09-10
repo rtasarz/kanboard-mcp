@@ -191,6 +191,14 @@ final class FakeEmptyTaskLinkModel
     }
 }
 
+final class FakeEmptyTaskFileModel
+{
+    public function getAll($taskId): array
+    {
+        return [];
+    }
+}
+
 $checks = 0;
 $failures = 0;
 
@@ -219,6 +227,7 @@ function buildTagServer(
         'taskFinderModel' => $taskFinder ?? new FakeTaskFinderModel(),
         'taskTagModel' => $taskTag ?? new FakeTaskTagModel(),
         'taskLinkModel' => new FakeEmptyTaskLinkModel(),
+        'taskFileModel' => new FakeEmptyTaskFileModel(),
     ] + $extra));
 }
 
@@ -356,6 +365,7 @@ check(($res['data']['project_name'] ?? null) === 'clacks' && ($res['data']['tags
 
 $res = callTool($server, 'get_task_details', ['task_id' => 51]);
 check(($res['data']['tags'] ?? null) === [], 'get_task_details with no tags returns tags: []');
+check(($res['data']['attachments'] ?? null) === [], 'get_task_details with no files returns attachments: []');
 
 $creation = new FakeTaskCreationModel();
 $modification = new FakeTaskModificationModel();

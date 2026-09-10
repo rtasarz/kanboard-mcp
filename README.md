@@ -28,11 +28,11 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `remove_project` | Remove a project (destructive; explicit user OK) | *"Delete that scratch board"* |
 | `duplicate_project` | Duplicate a project with selected optional parts | *"Duplicate the Template project as Mobile App with categories and actions"* |
 | `update_project` | Update identifier (alphanumeric, stored uppercased), name, and/or description | *"Set this board's identifier to LKAEBOK"* |
-| `search_tasks` | Search project tasks (`status:`, `assignee:`, `tag:`, `column:`, …; tags always; `include_links` optional). Dump: `status:open` | *"Find open tasks assigned to me tagged core"* |
+| `search_tasks` | Search project tasks (`status:`, `assignee:`, `tag:`, `column:`, …; tags and attachments always; `include_links` optional). Dump: `status:open` | *"Find open tasks assigned to me tagged core"* |
 | `create_task` | Create new tasks (optional column, swimlane, category, color, owner, due, priority, tags) | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
-| `get_task_details` | Get detailed task info (`verbose: true` adds names; includes `tags` and `links`) | *"Show me full details for task #123"* |
+| `get_task_details` | Get detailed task info (`verbose: true` adds names; includes `tags`, `links`, `attachments` `{id, name}`) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes, with in-column `position` (closed tasks need `only_open: false`) | *"Move the API task to Done column"* |
 | `move_task_to_project` | Move a task to another project (keeps id; optional swimlane/column/category/owner) | *"Move this task to the website board"* |
 

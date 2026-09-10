@@ -50,6 +50,14 @@ final class FakeTaskFinderModel
     }
 }
 
+final class FakeTaskFileModel
+{
+    public function getAll($taskId): array
+    {
+        return [];
+    }
+}
+
 final class FakeTaskTagModel
 {
     public function getTagsByTask($taskId): array
@@ -158,6 +166,7 @@ $server = new McpServer(new ArrayObject([
     'taskFinderModel' => $finder,
     'taskTagModel' => new FakeTaskTagModel(),
     'taskLinkModel' => $links,
+    'taskFileModel' => new FakeTaskFileModel(),
 ]));
 
 $listResponse = $server->handleRequest([
