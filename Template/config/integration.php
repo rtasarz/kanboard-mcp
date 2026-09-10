@@ -18,7 +18,7 @@
         <label><strong><?= t('MCP Client Configuration') ?></strong></label>
         <textarea readonly 
                   class="form-control" 
-                  style="background-color: #f5f5f5; font-family: monospace; height: 180px; resize: vertical; width: 100%;"
+                  style="font-family: monospace; height: 180px; resize: vertical; width: 100%;"
                   onclick="this.select();">{
   "mcpServers": {
     "kanboard": {
@@ -35,4 +35,6 @@
     <div class="alert alert-info">
         <p><strong><?= t('Security Note:') ?></strong> <?= t('This URL provides full access to your Kanboard instance. Keep it secure.') ?></p>
     </div>
-</div> 
+
+    <?= $this->url->link(t('Reset token'), 'ModelContextProtocolController', 'generateToken', array('plugin' => 'ModelContextProtocol'), true, 'btn btn-red') ?>
+</div>

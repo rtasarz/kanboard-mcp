@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Kanboard\Plugin\ModelContextProtocol\Controller;
 
 use Kanboard\Core\Base;
+use Kanboard\Core\Controller\AccessForbiddenException;
+use Kanboard\Core\Plugin\SchemaHandler;
 use Kanboard\Plugin\ModelContextProtocol\Core\McpAuth;
 use Kanboard\Plugin\ModelContextProtocol\Core\McpServer;
 use Throwable;
@@ -314,24 +316,7 @@ class ModelContextProtocolController extends Base
      */
     private function ensureTablesExist()
     {
-        $pdo = $this->db->getConnection();
-        
-        // Check if the table exists
-        $stmt = $pdo->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mcp_tokens'");
-        $stmt->execute();
-        
-        if (!$stmt->fetch()) {
-            // Create table if it doesn't exist
-            $sql = "CREATE TABLE mcp_tokens (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                token TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                is_active INTEGER DEFAULT 1
-            )";
-            
-            $pdo->exec($sql);
-        }
+        (new SchemaHandler($this->container))->loadSchema('ModelContextProtocol');
     }
     
     /**
@@ -340,24 +325,18 @@ class ModelContextProtocolController extends Base
     public function generateToken()
     {
         $this->ensureTablesExist();
-        
-        $name = $this->request->getStringParam('name', 'Default Token');
-        $token = bin2hex(random_bytes(32));
-        
-        $result = $this->mcpTokenModel->create([
-            'token' => $token,
-            'name' => $name,
-            'created_at' => time(),
-            'is_active' => 1
-        ]);
-        
-        if ($result) {
-            $this->flash->success('Token generated successfully');
-        } else {
-            $this->flash->failure('Failed to generate token');
+
+        if (! $this->token->validateCSRFToken($this->request->getStringParam('csrf_token'))) {
+            throw new AccessForbiddenException();
         }
-        
-        $this->response->redirect($this->helper->url->to('ModelContextProtocolController', 'settings', ['plugin' => 'ModelContextProtocol']));
+
+        if ($this->mcpTokenModel->generateToken()) {
+            $this->flash->success(t('Token regenerated.'));
+        } else {
+            $this->flash->failure(t('Unable to generate MCP token'));
+        }
+
+        $this->response->redirect($this->helper->url->to('ConfigController', 'integrations'));
     }
     
     /**
