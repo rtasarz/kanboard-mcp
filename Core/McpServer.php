@@ -1948,9 +1948,22 @@ class McpServer extends Base
                         'type' => 'text',
                         'text' => json_encode($result, JSON_PRETTY_PRINT)
                     ]
-                ]
+                ],
+                'structuredContent' => $this->structuredToolContent($result),
             ]
         ];
+    }
+
+    private function structuredToolContent(mixed $result): array
+    {
+        if (!is_array($result)) {
+            return ['value' => $result];
+        }
+        if (array_is_list($result)) {
+            return ['items' => $result];
+        }
+
+        return $result;
     }
 
     /**
