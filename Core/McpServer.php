@@ -211,6 +211,20 @@ class McpServer extends Base
                 ]
             ],
             [
+                'name' => 'update_project',
+                'description' => 'Update a project identifier, name, and/or description',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
+                        'identifier' => ['type' => 'string', 'description' => 'Project identifier, alphanumeric, stored uppercased'],
+                        'name' => ['type' => 'string', 'description' => 'Project name'],
+                        'description' => ['type' => 'string', 'description' => 'Project description']
+                    ],
+                    'required' => ['project_id']
+                ]
+            ],
+            [
                 'name' => 'search_tasks',
                 'description' => 'Search tasks in a project. Tags always; optional include_links. Dump: query status:open',
                 'inputSchema' => [
@@ -762,6 +776,29 @@ class McpServer extends Base
                     }
 
                     $result = ['project_id' => (int) $projectId];
+                    break;
+
+                case 'update_project':
+                    if (!isset($arguments['project_id']) || (int) $arguments['project_id'] <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: project_id must be a positive integer', $id);
+                    }
+
+                    $values = ['id' => (int) $arguments['project_id']];
+                    if (isset($arguments['identifier'])) {
+                        $identifier = is_string($arguments['identifier']) ? trim($arguments['identifier']) : '';
+                        if ($identifier === '' || !ctype_alnum($identifier)) {
+                            return $this->createToolExecutionErrorResponse('Invalid arguments: identifier must be alphanumeric', $id);
+                        }
+                        $values['identifier'] = strtoupper($identifier);
+                    }
+                    if (isset($arguments['name']) && is_string($arguments['name'])) {
+                        $values['name'] = trim($arguments['name']);
+                    }
+                    if (array_key_exists('description', $arguments)) {
+                        $values['description'] = $arguments['description'];
+                    }
+
+                    $result = ['success' => (bool) $this->container['projectModel']->update($values)];
                     break;
 
                 case 'search_tasks':

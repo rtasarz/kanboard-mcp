@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 42 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 43 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,15 +18,16 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (42 Tools)
+## Complete Tool Suite (43 Tools)
 
-### Project & Task Management (10 Tools)
+### Project & Task Management (11 Tools)
 | Tool | Description | Example Usage |
 |------|-------------|---------------|
 | `get_projects` | List all projects | *"Show me all projects"* |
 | `create_project` | Create new projects | *"Create a new project called Mobile App"* |
 | `remove_project` | Remove a project (destructive; explicit user OK) | *"Delete that scratch board"* |
 | `duplicate_project` | Duplicate a project with selected optional parts | *"Duplicate the Template project as Mobile App with categories and actions"* |
+| `update_project` | Update identifier (alphanumeric, stored uppercased), name, and/or description | *"Set this board's identifier to LKAEBOK"* |
 | `search_tasks` | Search project tasks (`status:`, `assignee:`, `tag:`, `column:`, …; tags always; `include_links` optional). Dump: `status:open` | *"Find open tasks assigned to me tagged core"* |
 | `create_task` | Create new tasks (optional column, swimlane, category, color, owner, due, priority, tags) | *"Add a task to implement user authentication"* |
 | `update_task` | Modify existing tasks (same optional fields as create; `replace` for tags) | *"Update the login task description"* |
