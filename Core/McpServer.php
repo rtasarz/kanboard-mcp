@@ -296,6 +296,7 @@ class McpServer extends Base
                         'project_id' => ['type' => 'integer', 'description' => 'Project ID'],
                         'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
                         'column_id' => ['type' => 'integer', 'description' => 'Target column ID'],
+                        'position' => ['type' => 'integer', 'description' => 'Position within the target column, 1-based (default 1 = top)'],
                         'swimlane_id' => ['type' => 'integer', 'description' => 'Target swimlane ID (keeps current if omitted)'],
                         'only_open' => ['type' => 'boolean', 'description' => 'Refuse moving closed tasks (default true); set false to move closed tasks too']
                     ],
@@ -818,7 +819,12 @@ class McpServer extends Base
                     }
 
                     $swimlaneId = isset($arguments['swimlane_id']) ? (int) $arguments['swimlane_id'] : 0;
+                    $position = isset($arguments['position']) ? (int) $arguments['position'] : 1;
                     $onlyOpen = isset($arguments['only_open']) ? (bool) $arguments['only_open'] : true;
+
+                    if ($position <= 0) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: position must be a positive integer', $id);
+                    }
 
                     if ($onlyOpen) {
                         $task = $this->container['taskFinderModel']->getById($taskId);
@@ -835,7 +841,7 @@ class McpServer extends Base
                         $projectId,
                         $taskId,
                         $columnId,
-                        1,
+                        $position,
                         $swimlaneId,
                         true,
                         $onlyOpen

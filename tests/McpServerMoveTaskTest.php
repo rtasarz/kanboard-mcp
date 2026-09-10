@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// RPC wiring tests for the move_task tool and the only_open toggle (KB#484).
+// RPC wiring tests for the move_task tool: the only_open toggle (KB#484)
+// and in-column position pass-through (KB#578).
 // Mocks the Kanboard container models and drives McpServer::handleRequest;
 // never touches a live Kanboard instance.
 //
@@ -101,7 +102,9 @@ foreach ($listResponse['result']['tools'] ?? [] as $tool) {
 }
 check($moveTool !== null, 'tools/list exposes move_task');
 check(($moveTool['inputSchema']['properties']['only_open']['type'] ?? null) === 'boolean', 'move_task schema declares only_open as boolean');
+check(($moveTool['inputSchema']['properties']['position']['type'] ?? null) === 'integer', 'move_task schema declares position as integer');
 check(!in_array('only_open', $moveTool['inputSchema']['required'] ?? [], true), 'only_open is optional');
+check(!in_array('position', $moveTool['inputSchema']['required'] ?? [], true), 'position is optional');
 
 $res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20]);
 check($res['isError'] === false && ($res['data']['success'] ?? null) === true, 'default move of open task succeeds');
@@ -110,6 +113,19 @@ check($position->lastCall === [1, 10, 20, 1, 0, true, true], 'default call keeps
 $position->lastCall = null;
 $res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20, 'swimlane_id' => 19]);
 check($res['data']['success'] === true && $position->lastCall === [1, 10, 20, 1, 19, true, true], 'swimlane_id still passes through');
+
+$position->lastCall = null;
+$res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20, 'position' => 3]);
+check($res['data']['success'] === true && $position->lastCall === [1, 10, 20, 3, 0, true, true], 'position passes through to core');
+
+$position->lastCall = null;
+$res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20, 'position' => 2, 'swimlane_id' => 19, 'only_open' => false]);
+check($res['data']['success'] === true && $position->lastCall === [1, 10, 20, 2, 19, true, false], 'position composes with swimlane_id and only_open');
+
+$position->lastCall = null;
+$res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20, 'position' => 0]);
+check($res['isError'] === true, 'move_task rejects non-positive position');
+check($position->lastCall === null, 'rejected position never reaches TaskPositionModel');
 
 $position->lastCall = null;
 $res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 11, 'column_id' => 21, 'only_open' => false]);
