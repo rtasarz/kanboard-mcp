@@ -10,7 +10,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ## Features
 
-- **Complete Enterprise Control**: 43 powerful tools covering every aspect of project management
+- **Complete Enterprise Control**: 44 powerful tools covering every aspect of project management
 - **Secure Token Authentication**: Enterprise-grade security with token-based access
 - **AI Assistant Ready**: Optimized for Cursor, Claude, and other AI development tools
 - **Full CRUD Operations**: Create, read, update, and delete across all Kanboard entities
@@ -18,9 +18,9 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 - **Real-time Operations**: Instant project updates through natural language
 - **JSON-RPC 2.0 Compliant**: Fully compliant with MCP specification v2025-11-25
 
-## Complete Tool Suite (43 Tools)
+## Complete Tool Suite (44 Tools)
 
-### Project & Task Management (11 Tools)
+### Project & Task Management (12 Tools)
 | Tool | Description | Example Usage |
 |------|-------------|---------------|
 | `get_projects` | List all projects | *"Show me all projects"* |
@@ -34,6 +34,7 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 | `delete_task` | Remove tasks | *"Delete the obsolete testing task"* |
 | `get_task_details` | Get detailed task info (`verbose: true` adds names; includes `tags` and `links`) | *"Show me full details for task #123"* |
 | `move_task` | Move tasks between columns or swimlanes, with in-column `position` (closed tasks need `only_open: false`) | *"Move the API task to Done column"* |
+| `move_task_to_project` | Move a task to another project (keeps id; optional swimlane/column/category/owner) | *"Move this task to the website board"* |
 
 ### Automatic Actions (5 Tools)
 | Tool | Description | Example Usage |

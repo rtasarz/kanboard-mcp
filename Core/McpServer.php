@@ -318,6 +318,22 @@ class McpServer extends Base
                 ]
             ],
             [
+                'name' => 'move_task_to_project',
+                'description' => 'Move a task to a different project (keeps task id; destination column/swimlane/category default if omitted)',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'task_id' => ['type' => 'integer', 'description' => 'Task ID'],
+                        'project_id' => ['type' => 'integer', 'description' => 'Destination project ID'],
+                        'swimlane_id' => ['type' => 'integer', 'description' => 'Destination swimlane ID (core default if omitted)'],
+                        'column_id' => ['type' => 'integer', 'description' => 'Destination column ID (core default if omitted)'],
+                        'category_id' => ['type' => 'integer', 'description' => 'Destination category ID (core default if omitted)'],
+                        'owner_id' => ['type' => 'integer', 'description' => 'Assignee user ID (core default if omitted)']
+                    ],
+                    'required' => ['task_id', 'project_id']
+                ]
+            ],
+            [
                 'name' => 'get_task_details',
                 'description' => 'Get detailed information about a specific task (verbose: true adds project, column, swimlane, and category names)',
                 'inputSchema' => [
@@ -884,6 +900,28 @@ class McpServer extends Base
                         $onlyOpen
                     );
                     $result = ['success' => $moveResult];
+                    break;
+
+                case 'move_task_to_project':
+                    $taskId = isset($arguments['task_id']) ? (int) $arguments['task_id'] : 0;
+                    $projectId = isset($arguments['project_id']) ? (int) $arguments['project_id'] : 0;
+
+                    if ($taskId <= 0 || $projectId <= 0) {
+                        return $this->createToolExecutionErrorResponse(
+                            'Invalid arguments: task_id and project_id must be positive integers',
+                            $id
+                        );
+                    }
+
+                    $moved = $this->container['taskProjectMoveModel']->moveToProject(
+                        $taskId,
+                        $projectId,
+                        isset($arguments['swimlane_id']) ? (int) $arguments['swimlane_id'] : null,
+                        isset($arguments['column_id']) ? (int) $arguments['column_id'] : null,
+                        isset($arguments['category_id']) ? (int) $arguments['category_id'] : null,
+                        isset($arguments['owner_id']) ? (int) $arguments['owner_id'] : null
+                    );
+                    $result = ['success' => (bool) $moved];
                     break;
 
                 case 'get_task_details':
