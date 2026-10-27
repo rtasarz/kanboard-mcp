@@ -34,4 +34,8 @@ return array(
     'Copy this URL to configure your MCP client. Token is included for authentication.' => 'Copy this URL to configure your MCP client. Token is included for authentication.',
     'This URL provides full access to your Kanboard instance. Keep it secure.' => 'This URL provides full access to your Kanboard instance. Keep it secure.',
     'Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The token is sent as an Authorization header.' => 'Copy this configuration to your MCP client settings (e.g., Claude Desktop app config). The token is sent as an Authorization header.',
-); 
+    'New token generated. Copy it now: it is stored hashed and will not be shown again.' => 'New token generated. Copy it now: it is stored hashed and will not be shown again.',
+    'A token was generated on %s. It cannot be displayed again; reset it to obtain a new one.' => 'A token was generated on %s. It cannot be displayed again; reset it to obtain a new one.',
+    'Reset token' => 'Reset token',
+    'Token regenerated.' => 'Token regenerated.',
+);
