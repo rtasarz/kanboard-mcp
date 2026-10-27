@@ -757,7 +757,7 @@ class McpServer extends Base
             switch ($toolName) {
                 case 'get_projects':
                     $projects = $this->container['projectModel']->getAll();
-                    $result = array_values($projects);
+                    $result = array_map([$this, 'sanitizeProject'], array_values($projects));
                     break;
 
                 case 'create_project':
@@ -1856,6 +1856,26 @@ class McpServer extends Base
     }
 
     /**
+     * Keep only the project columns an MCP client needs. ProjectModel::getAll()
+     * also returns the public-board share token and the inbound e-mail
+     * address, which are not needed to manage the board.
+     *
+     * @param array<string, mixed> $project
+     * @return array<string, mixed>
+     */
+    private function sanitizeProject(array $project): array
+    {
+        static $allowed = [
+            'id', 'name', 'description', 'identifier', 'is_active', 'is_public', 'is_private',
+            'is_everybody_allowed', 'owner_id', 'start_date', 'end_date', 'last_modified',
+            'priority_default', 'priority_start', 'priority_end', 'task_limit',
+            'per_swimlane_task_limits', 'enable_global_tags', 'default_swimlane', 'show_default_swimlane',
+        ];
+
+        return array_intersect_key($project, array_flip($allowed));
+    }
+
+    /**
      * @param list<array<string, mixed>> $rows
      * @return list<array{id: int, label: string, opposite_label: string|null}>
      */
@@ -1936,7 +1956,7 @@ class McpServer extends Base
             switch ($uri) {
                 case 'kanboard://projects':
                     $projects = $this->container['projectModel']->getAll();
-                    $content = json_encode(array_values($projects), JSON_PRETTY_PRINT);
+                    $content = json_encode(array_map([$this, 'sanitizeProject'], array_values($projects)), JSON_PRETTY_PRINT);
                     break;
 
                 case 'kanboard://users':
