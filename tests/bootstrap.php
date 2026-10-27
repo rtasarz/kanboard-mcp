@@ -19,6 +19,19 @@ class TaskModel
     public const STATUS_CLOSED = 0;
 }
 
+namespace Kanboard\Core\Security;
+
+class Role
+{
+    const APP_ADMIN       = 'app-admin';
+    const APP_MANAGER     = 'app-manager';
+    const APP_USER        = 'app-user';
+    const APP_PUBLIC      = 'app-public';
+    const PROJECT_MANAGER = 'project-manager';
+    const PROJECT_MEMBER  = 'project-member';
+    const PROJECT_VIEWER  = 'project-viewer';
+}
+
 namespace Kanboard\Filter;
 
 class TaskProjectFilter
