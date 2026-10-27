@@ -879,15 +879,20 @@ class McpServer extends Base
                         return $this->createToolExecutionErrorResponse('Invalid arguments: position must be a positive integer', $id);
                     }
 
-                    if ($onlyOpen) {
-                        $task = $this->container['taskFinderModel']->getById($taskId);
-                        if (!empty($task) && (int) $task['is_active'] === TaskModel::STATUS_CLOSED) {
-                            $result = [
-                                'success' => false,
-                                'message' => 'Task is closed and only_open defaults to true; pass only_open=false to move it'
-                            ];
-                            break;
-                        }
+                    $task = $this->container['taskFinderModel']->getById($taskId);
+                    if (empty($task)) {
+                        return $this->createToolExecutionErrorResponse('Task not found', $id);
+                    }
+                    if ((int) $task['project_id'] !== $projectId) {
+                        return $this->createToolExecutionErrorResponse('Invalid arguments: task does not belong to project_id', $id);
+                    }
+
+                    if ($onlyOpen && (int) $task['is_active'] === TaskModel::STATUS_CLOSED) {
+                        $result = [
+                            'success' => false,
+                            'message' => 'Task is closed and only_open defaults to true; pass only_open=false to move it'
+                        ];
+                        break;
                     }
 
                     $moveResult = $this->container['taskPositionModel']->movePosition(

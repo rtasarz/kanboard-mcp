@@ -76,8 +76,9 @@ function callTool(McpServer $server, string $name, array $arguments = []): array
 // --- fixtures ---------------------------------------------------------------
 
 $finder = new FakeTaskFinderModel();
-$finder->tasks[10] = ['id' => 10, 'is_active' => 1, 'column_id' => 20, 'swimlane_id' => 19];
-$finder->tasks[11] = ['id' => 11, 'is_active' => 0, 'column_id' => 20, 'swimlane_id' => 19];
+$finder->tasks[10] = ['id' => 10, 'project_id' => 1, 'is_active' => 1, 'column_id' => 20, 'swimlane_id' => 19];
+$finder->tasks[11] = ['id' => 11, 'project_id' => 1, 'is_active' => 0, 'column_id' => 20, 'swimlane_id' => 19];
+$finder->tasks[12] = ['id' => 12, 'project_id' => 2, 'is_active' => 1, 'column_id' => 30, 'swimlane_id' => 29];
 
 $position = new FakeTaskPositionModel();
 
@@ -142,6 +143,15 @@ $position->result = false;
 $res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10, 'column_id' => 20]);
 check(($res['data']['success'] ?? null) === false, 'core failure surfaces as success=false');
 $position->result = true;
+
+$position->lastCall = null;
+$res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 12, 'column_id' => 20]);
+check($res['isError'] === true && str_contains((string) $res['text'], 'does not belong'), 'task from another project is rejected');
+check($position->lastCall === null, 'no movePosition call for a task from another project');
+
+$res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 99, 'column_id' => 20]);
+check($res['isError'] === true && str_contains((string) $res['text'], 'not found'), 'unknown task is rejected');
+check($position->lastCall === null, 'no movePosition call for an unknown task');
 
 $res = callTool($server, 'move_task', ['project_id' => 1, 'task_id' => 10]);
 check($res['isError'] === true, 'move_task rejects missing column_id');
