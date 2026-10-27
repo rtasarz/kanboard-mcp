@@ -6,10 +6,12 @@ namespace Kanboard\Plugin\ModelContextProtocol\Core;
 final class McpAuth
 {
     /**
+     * The token is accepted from the Authorization header only. A query-string
+     * token would be copied into web server, proxy and browser history logs.
+     *
      * @param array<string, mixed> $server
-     * @param array<string, mixed> $get
      */
-    public static function tokenFromRequest(array $server, array $get): string
+    public static function tokenFromRequest(array $server): string
     {
         $header = '';
         if (isset($server['HTTP_AUTHORIZATION']) && is_string($server['HTTP_AUTHORIZATION'])) {
@@ -22,8 +24,6 @@ final class McpAuth
             return $m[1];
         }
 
-        $query = $get['token'] ?? '';
-
-        return is_string($query) ? $query : '';
+        return '';
     }
 }

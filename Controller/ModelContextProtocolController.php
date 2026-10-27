@@ -79,7 +79,7 @@ class ModelContextProtocolController extends Base
      */
     private function validateToken(): bool
     {
-        $token = McpAuth::tokenFromRequest($_SERVER, $_GET);
+        $token = McpAuth::tokenFromRequest($_SERVER);
 
         if ($token === '') {
             return false;

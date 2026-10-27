@@ -136,8 +136,9 @@ Transform your Kanboard into an AI-powered project management powerhouse! This p
 
 ### MCP Server URL Format
 ```
-https://your-kanboard.com/?controller=ModelContextProtocolController&action=handle&plugin=ModelContextProtocol&token=YOUR_TOKEN
+https://your-kanboard.com/?controller=ModelContextProtocolController&action=handle&plugin=ModelContextProtocol
 ```
+The token is sent as an HTTP header: `Authorization: Bearer YOUR_TOKEN`. It is not accepted in the URL, because query strings end up in web server, proxy and browser history logs.
 
 ## AI Assistant Integration
 
@@ -178,7 +179,7 @@ The plugin works with MCP-compatible clients and negotiates protocol versions up
 
 ### API Endpoints
 - **Main Handler**: `/?controller=ModelContextProtocolController&action=handle`
-- **Authentication**: Token-based via URL parameter
+- **Authentication**: `Authorization: Bearer <token>` header
 - **Content-Type**: `application/json`
 - **Methods**: POST for all MCP operations
 
