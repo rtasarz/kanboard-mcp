@@ -88,7 +88,15 @@ class ModelContextProtocolController extends Base
         if (!$this->mcpTokenModel->validateToken($token)) {
             return false;
         }
-        
+
+        $userId = $this->mcpTokenModel->getUserIdByToken($token);
+        if ($userId > 0) {
+            $user = $this->userModel->getById($userId);
+            if (!empty($user)) {
+                $this->userSession->initialize($user);
+            }
+        }
+
         return true;
     }
     

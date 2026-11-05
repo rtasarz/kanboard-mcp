@@ -2,7 +2,7 @@
 
 namespace Kanboard\Plugin\ModelContextProtocol\Schema;
 
-const VERSION = 1;
+const VERSION = 2;
 
 function version_1($pdo)
 {
@@ -17,4 +17,9 @@ function version_1($pdo)
             KEY idx_active (is_active)
         ) ENGINE=InnoDB CHARSET=utf8
     ');
+}
+
+function version_2($pdo)
+{
+    $pdo->exec('ALTER TABLE mcp_tokens ADD COLUMN user_id INT DEFAULT 0 NOT NULL');
 } 

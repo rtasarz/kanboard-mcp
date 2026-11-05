@@ -38,6 +38,20 @@ class McpTokenModel extends Base
             ->eq('is_active', 1)
             ->exists();
     }
+
+    public function getUserIdByToken($token)
+    {
+        if (empty($token)) {
+            return 0;
+        }
+
+        $userId = $this->db->table(self::TABLE)
+            ->eq('token', $token)
+            ->eq('is_active', 1)
+            ->findOneColumn('user_id');
+
+        return (int) $userId;
+    }
     
     /**
      * Generate new token
@@ -55,6 +69,7 @@ class McpTokenModel extends Base
             'token' => $token,
             'is_active' => 1,
             'created_at' => time(),
+            'user_id' => (int) $this->userSession->getId(),
         ]);
     }
     

@@ -2,7 +2,7 @@
 
 namespace Kanboard\Plugin\ModelContextProtocol\Schema;
 
-const VERSION = 1;
+const VERSION = 2;
 
 function version_1($pdo)
 {
@@ -17,4 +17,9 @@ function version_1($pdo)
     
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_mcp_token ON mcp_tokens (token)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_mcp_active ON mcp_tokens (is_active)');
+}
+
+function version_2($pdo)
+{
+    $pdo->exec('ALTER TABLE mcp_tokens ADD COLUMN user_id INTEGER DEFAULT 0 NOT NULL');
 } 
